@@ -16,15 +16,7 @@ int main() { return simple_main(); }
 
 int fork_main()
 {
-	auto res = inf::make_pipe();
-
-	if (!res)
-	{
-		std::cerr << "could not pipe: " << res.error() << std::endl;
-		return 1;
-	}
-
-	inf::Pipe pipe = std::move(res.value());
+	auto pipe = inf::make_pipe<char>();
 
 #ifndef _MSC_VER
 	pid_t pid = ::fork();
@@ -65,15 +57,7 @@ int fork_main()
 
 int simple_main()
 {
-	auto res = inf::make_pipe();
-
-	if (!res)
-	{
-		std::cerr << "could not pipe: " << res.error() << std::endl;
-		return 1;
-	}
-
-	inf::Pipe pipe = std::move(res.value());
+	auto pipe = inf::make_pipe<char>();
 
 	pipe.write() << "Hello World!\n";
 	pipe.write_close();
