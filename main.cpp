@@ -2,10 +2,8 @@
 #include <iostream>
 #include <string>
 // platform specific
-#ifndef _MSC_VER
-#	include <sys/wait.h>
-#	include <unistd.h>
-#endif
+#include <sys/wait.h>
+#include <unistd.h>
 // pipes
 #include "pipes.hpp"
 
@@ -18,7 +16,6 @@ int fork_main()
 {
 	auto pipe = inf::make_pipe<char>();
 
-#ifndef _MSC_VER
 	pid_t pid = ::fork();
 
 	if (pid < 0)
@@ -46,9 +43,6 @@ int fork_main()
 	std::getline(pipe.read(), line);
 
 	std::cout << line << std::endl;
-#else
-	std::cout << "Not yet" << std::endl;
-#endif
 
 	return 0;
 }
