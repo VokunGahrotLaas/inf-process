@@ -5,15 +5,11 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-// platform specific
-#ifdef _MSC_VER
-#	include <io.h>
-#else // _MSC_VER
-#	include <unistd.h>
-#endif
 // C std
 #include <cerrno>
 #include <cstdio>
+// platform specific
+#include <unistd.h>
 // inf
 #include "stdio_stream.hpp"
 
@@ -67,19 +63,18 @@ public:
 
 	bool write_close()
 	{
+		read_.tie(nullptr);
 		FILE* old_file = write_.file();
 		write_ = nullptr;
 		return old_file != nullptr;
 	}
 
-	bool is_open() const { return read_is_open() && write_is_open(); }
+	bool read_is_open() const { return !read_.fail(); }
 
-	bool read_is_open() const { return read_.file() != nullptr; }
+	bool write_is_open() const { return !write_.fail(); }
 
-	bool write_is_open() const { return write_.file() != nullptr; }
-
-	std::istream& read() { return read_.stream(); }
-	std::ostream& write() { return write_.stream(); }
+	std::istream& read() { return read_; }
+	std::ostream& write() { return write_; }
 
 	FILE* read_file() { return read_.file(); }
 
@@ -92,7 +87,9 @@ private:
 	pipe(int read, int write)
 		: read_{ read }
 		, write_{ write }
-	{}
+	{
+		read_.tie(&write_);
+	}
 
 	stdio_istream<char> read_;
 	stdio_ostream<char> write_;
@@ -122,11 +119,7 @@ inline pipe<CharT, Traits> make_pipe()
 {
 	int raw_pipe[2] = { -1, -1 };
 	int old_errno = errno;
-#ifndef _MSC_VER
 	bool success = ::pipe(raw_pipe) >= 0;
-#else
-	bool success = ::_pipe(raw_pipe, 4'096, 0) >= 0;
-#endif
 	int failure_errno = errno;
 	errno = old_errno;
 	if (!success) throw errno_error("pipe", failure_errno);

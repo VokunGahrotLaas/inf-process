@@ -12,7 +12,7 @@
 int fork_main();
 int simple_main();
 
-int main() { return simple_main(); }
+int main() { return fork_main(); }
 
 int fork_main()
 {
@@ -31,7 +31,6 @@ int fork_main()
 	{
 		pipe.read_close();
 		pipe.write() << "Hello World!\n";
-		pipe.write_close();
 		return 0;
 	}
 
@@ -45,7 +44,6 @@ int fork_main()
 
 	pipe.write_close();
 	std::getline(pipe.read(), line);
-	pipe.read_close();
 
 	std::cout << line << std::endl;
 #else
@@ -60,11 +58,9 @@ int simple_main()
 	auto pipe = inf::make_pipe<char>();
 
 	pipe.write() << "Hello World!\n";
-	pipe.write_close();
 
 	std::string line;
 	std::getline(pipe.read(), line);
-	pipe.read_close();
 
 	std::cout << line << std::endl;
 
