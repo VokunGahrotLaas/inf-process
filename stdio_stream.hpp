@@ -1,185 +1,125 @@
 #pragma once
 
-#include <version>
-
-#if defined(__GLIBCXX__) || defined(__GLIBCPP__)
-#	define INF_LIBSTDCPP
-#elif defined(_LIBCPP_VERSION)
-#	define INF_LIBCPP
-#elif defined(_MSC_VER)
-#	define INF_LIBMSVCCPP
-#endif
-
-#ifndef INF_LIBSTDCPP
-#	error "sorry not for now, please compile with GNU's libstdc++"
-#endif
-
-#include <ext/stdio_filebuf.h>
-#include <ext/stdio_sync_filebuf.h>
 #include <iostream>
-#include <memory>
+#include <sstream>
+// inf
+#include "stdiobuf.hpp"
 
 namespace inf
 {
 
-template <typename CharT, typename Traits = std::char_traits<CharT>>
-using stdio_filebuf = __gnu_cxx::stdio_sync_filebuf<CharT, Traits>;
-
-template <typename CharT, typename Traits = std::char_traits<CharT>>
-class stdio_iostream : public std::basic_iostream<CharT, Traits>
+enum class OpenMode : int
 {
-public:
-	using super_type = std::basic_iostream<CharT, Traits>;
-
-	explicit stdio_iostream(FILE* file)
-		: super_type(&filebuf_)
-		, filebuf_{ file }
-	{}
-
-	explicit stdio_iostream(int fd)
-		: stdio_iostream{ fd >= 0 ? ::fdopen(fd, "rw") : nullptr }
-	{}
-
-	stdio_iostream(stdio_iostream const&) = delete;
-	stdio_iostream& operator=(stdio_iostream const&) = delete;
-
-	stdio_iostream(stdio_iostream&& other)
-		: super_type(std::move(other))
-		, filebuf_(std::move(other.filebuf_))
-	{
-		super_type::rdbuf(&filebuf_);
-	}
-
-	stdio_iostream& operator=(stdio_iostream&& other)
-	{
-		if (filebuf_.file() != nullptr) std::fclose(filebuf_.file());
-		filebuf_ = std::move(other.filebuf_);
-		super_type::operator=(std::move(other));
-	}
-
-	~stdio_iostream() = default;
-
-	stdio_iostream& operator=(FILE* new_file)
-	{
-		if (new_file == file()) return *this;
-		if (filebuf_.file() != nullptr) std::fclose(filebuf_.file());
-		filebuf_ = stdio_filebuf<CharT, Traits>(new_file);
-		return *this;
-	}
-
-	FILE* file() const { return filebuf_ ? filebuf_->file() : nullptr; }
-
-	int fd() const { return file() != nullptr ? ::fileno(file()) : -1; }
-
-private:
-	std::unique_ptr<stdio_filebuf<CharT, Traits>, decltype([](stdio_filebuf<CharT, Traits>* streambuf) {
-						if (streambuf == nullptr) return;
-						if (streambuf->file() != nullptr) std::fclose(streambuf->file());
-						delete streambuf;
-					})>
-		filebuf_;
+	NONE = 0,
+	APP = 1 << 0,
+	BIN = 1 << 1,
+	IN = 1 << 2,
+	OUT = 1 << 3,
 };
 
-template <typename CharT, typename Traits = std::char_traits<CharT>>
-class stdio_istream : public std::basic_istream<CharT, Traits>
+[[gnu::pure]]
+constexpr OpenMode
+operator|(OpenMode lhs, OpenMode rhs)
+{
+	return static_cast<OpenMode>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
+constexpr OpenMode& operator|=(OpenMode& lhs, OpenMode rhs) { return lhs = lhs | rhs; }
+
+[[gnu::pure]]
+constexpr int open_mode_int(std::ios_base::openmode mode)
+{
+	OpenMode imode = OpenMode::NONE;
+	if (mode & std::ios_base::app) imode |= OpenMode::APP;
+	if (mode & std::ios_base::binary) imode |= OpenMode::BIN;
+	if (mode & std::ios_base::in) imode |= OpenMode::IN;
+	if (mode & std::ios_base::out) imode |= OpenMode::OUT;
+	return static_cast<int>(imode);
+}
+
+[[gnu::pure]]
+constexpr char const* open_mode_str(std::ios_base::openmode mode)
+{
+	constexpr char const* open_mode_strs[] = {
+		"", "a", "b", "ab", "r", "a+", "rb", "a+b", "w", "a", "wb", "ab", "w+", "a+", "w+b", "a+b",
+	};
+	return open_mode_strs[open_mode_int(mode)];
+}
+
+template <typename CharT, typename Traits, template <typename CharT2, typename Traits2> class Stream,
+		  std::ios_base::openmode DefaultMode>
+class basic_stdio_stream : public Stream<CharT, Traits>
 {
 public:
-	using super_type = std::basic_istream<CharT, Traits>;
+	using super_type = Stream<CharT, Traits>;
+	using buf_type = basic_stdiobuf<CharT, Traits>;
 
-	explicit stdio_istream(FILE* file)
-		: super_type(&filebuf_)
-		, filebuf_{ file }
+	explicit basic_stdio_stream(std::FILE* file)
+		: super_type(&buf_)
+		, buf_{ file }
 	{}
 
-	explicit stdio_istream(int fd)
-		: stdio_istream{ fd >= 0 ? ::fdopen(fd, "r") : nullptr }
+	explicit basic_stdio_stream(int fd, std::ios_base::openmode mode = DefaultMode)
+		: basic_stdio_stream{ fd >= 0 ? ::fdopen(fd, open_mode_str(mode)) : nullptr }
 	{}
 
-	stdio_istream(stdio_istream const&) = delete;
-	stdio_istream& operator=(stdio_istream const&) = delete;
+	basic_stdio_stream(basic_stdio_stream const&) = delete;
 
-	stdio_istream(stdio_istream&& other)
+	basic_stdio_stream(basic_stdio_stream&& other)
 		: super_type(std::move(other))
-		, filebuf_(std::move(other.filebuf_))
+		, buf_(std::move(other.buf_))
 	{
-		super_type::rdbuf(&filebuf_);
+		super_type::rdbuf(&buf_);
 	}
 
-	stdio_istream& operator=(stdio_istream&& other)
+	~basic_stdio_stream() = default;
+
+	basic_stdio_stream& operator=(basic_stdio_stream const&) = delete;
+
+	basic_stdio_stream& operator=(basic_stdio_stream&& other)
 	{
-		if (filebuf_.file() != nullptr) std::fclose(filebuf_.file());
-		filebuf_ = std::move(other.filebuf_);
+		if (buf_.file() != nullptr) std::fclose(buf_.file());
+		buf_ = std::move(other.buf_);
 		super_type::operator=(std::move(other));
+		super_type::rdbuf(&buf_);
 	}
 
-	~stdio_istream() override = default;
-
-	stdio_istream& operator=(FILE* new_file)
+	basic_stdio_stream& operator=(std::FILE* new_file)
 	{
 		if (new_file == file()) return *this;
-		if (filebuf_.file() != nullptr) std::fclose(filebuf_.file());
-		filebuf_ = stdio_filebuf<CharT, Traits>(new_file);
+		buf_ = buf_type(new_file);
 		return *this;
 	}
 
-	bool is_open() { return filebuf_.is_open(); }
+	bool is_open() const { return buf_.is_open(); }
 
-	FILE* file() { return filebuf_.file(); }
+	std::FILE* file() { return buf_.file(); }
 
 	int fd() { return file() != nullptr ? ::fileno(file()) : -1; }
 
+	buf_type& buf() { return buf_; }
+
 private:
-	stdio_filebuf<CharT, Traits> filebuf_;
+	buf_type buf_;
 };
 
 template <typename CharT, typename Traits = std::char_traits<CharT>>
-class stdio_ostream : public std::basic_ostream<CharT, Traits>
-{
-public:
-	using super_type = std::basic_ostream<CharT, Traits>;
+using basic_stdio_iostream =
+	basic_stdio_stream<CharT, Traits, std::basic_iostream, std::ios_base::in | std::ios_base::out>;
 
-	explicit stdio_ostream(FILE* file)
-		: super_type(&filebuf_)
-		, filebuf_{ file }
-	{}
+template <typename CharT, typename Traits = std::char_traits<CharT>>
+using basic_stdio_istream = basic_stdio_stream<CharT, Traits, std::basic_istream, std::ios_base::in>;
 
-	explicit stdio_ostream(int fd)
-		: stdio_ostream{ fd >= 0 ? ::fdopen(fd, "w") : nullptr }
-	{}
+template <typename CharT, typename Traits = std::char_traits<CharT>>
+using basic_stdio_ostream = basic_stdio_stream<CharT, Traits, std::basic_ostream, std::ios_base::out>;
 
-	stdio_ostream(stdio_ostream const&) = delete;
-	stdio_ostream& operator=(stdio_ostream const&) = delete;
+using stdio_iostream = basic_stdio_iostream<char>;
+using wstdio_iostream = basic_stdio_iostream<wchar_t>;
 
-	stdio_ostream(stdio_ostream&& other)
-		: super_type(std::move(other))
-		, filebuf_(std::move(other.filebuf_))
-	{
-		super_type::rdbuf(&filebuf_);
-	}
+using stdio_istream = basic_stdio_istream<char>;
+using wstdio_istream = basic_stdio_istream<wchar_t>;
 
-	stdio_ostream& operator=(stdio_ostream&& other)
-	{
-		if (filebuf_.file() != nullptr) std::fclose(filebuf_.file());
-		filebuf_ = std::move(other.filebuf_);
-		super_type::operator=(std::move(other));
-	}
-
-	~stdio_ostream() override = default;
-
-	stdio_ostream& operator=(FILE* new_file)
-	{
-		if (new_file == file()) return *this;
-		if (filebuf_.file() != nullptr) std::fclose(filebuf_.file());
-		filebuf_ = stdio_filebuf<CharT, Traits>(new_file);
-		return *this;
-	}
-
-	FILE* file() { return filebuf_.file(); }
-
-	int fd() { return file() != nullptr ? ::fileno(file()) : -1; }
-
-private:
-	stdio_filebuf<CharT, Traits> filebuf_;
-};
+using stdio_ostream = basic_stdio_ostream<char>;
+using wstdio_ostream = basic_stdio_ostream<wchar_t>;
 
 } // namespace inf

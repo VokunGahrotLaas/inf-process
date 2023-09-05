@@ -10,11 +10,11 @@
 int fork_main();
 int simple_main();
 
-int main() { return fork_main(); }
+int main() { return simple_main(); }
 
 int fork_main()
 {
-	auto pipe = inf::make_pipe<char>();
+	auto pipe = inf::make_pipe();
 
 	pid_t pid = ::fork();
 
@@ -49,7 +49,7 @@ int fork_main()
 
 int simple_main()
 {
-	auto pipe = inf::make_pipe<char>();
+	auto pipe = inf::make_pipe();
 
 	pipe.write() << "Hello World!\n";
 
