@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 // inf
-#include "stdiobuf.hpp"
+#include <inf/stdiobuf.hpp>
 
 namespace inf
 {
@@ -82,6 +82,7 @@ public:
 		buf_ = std::move(other.buf_);
 		super_type::operator=(std::move(other));
 		super_type::rdbuf(&buf_);
+		return *this;
 	}
 
 	basic_stdio_stream& operator=(std::FILE* new_file)
@@ -121,5 +122,18 @@ using wstdio_istream = basic_stdio_istream<wchar_t>;
 
 using stdio_ostream = basic_stdio_ostream<char>;
 using wstdio_ostream = basic_stdio_ostream<wchar_t>;
+
+#ifdef INF_EXTERN_TEMPLATE
+extern template class basic_stdio_stream<char, std::char_traits<char>, std::basic_iostream,
+										 std::ios_base::in | std::ios_base::out>;
+extern template class basic_stdio_stream<wchar_t, std::char_traits<wchar_t>, std::basic_iostream,
+										 std::ios_base::in | std::ios_base::out>;
+
+extern template class basic_stdio_stream<char, std::char_traits<char>, std::basic_istream, std::ios_base::in>;
+extern template class basic_stdio_stream<wchar_t, std::char_traits<wchar_t>, std::basic_istream, std::ios_base::in>;
+
+extern template class basic_stdio_stream<char, std::char_traits<char>, std::basic_ostream, std::ios_base::out>;
+extern template class basic_stdio_stream<wchar_t, std::char_traits<wchar_t>, std::basic_ostream, std::ios_base::out>;
+#endif
 
 } // namespace inf

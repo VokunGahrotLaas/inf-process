@@ -233,4 +233,9 @@ inline std::streamsize wstdiobuf::xsputn(wchar_t const* s, std::streamsize n)
 	return ret;
 }
 
+#ifdef INF_EXTERN_TEMPLATE
+extern template class basic_stdiobuf<char>;
+extern template class basic_stdiobuf<wchar_t>;
+#endif
+
 } // namespace inf

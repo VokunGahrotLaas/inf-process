@@ -5,8 +5,9 @@
 // for ::pipe
 #include <unistd.h>
 // inf
-#include "exceptions.hpp"
-#include "stdio_stream.hpp"
+#include <inf/exceptions.hpp>
+#include <inf/stdio_stream.hpp>
+#include <utility>
 
 namespace inf
 {
@@ -35,9 +36,8 @@ public:
 	{
 		if (this == &other) return *this;
 		close();
-		read_ = std::move(other.read_);
-		write_ = std::move(other.write_);
-		other.read_ = other.write_ = nullptr;
+		read_ = std::exchange(other.read_, nullptr);
+		write_ = std::exchange(other.write_, nullptr);
 		if (read_.tie() == &other.write_) read_.tie(&write_);
 		return *this;
 	}
@@ -101,5 +101,10 @@ inline basic_pipe<CharT, Traits> make_basic_pipe()
 inline pipe make_pipe() { return make_basic_pipe<char>(); }
 
 inline wpipe make_wpipe() { return make_basic_pipe<wchar_t>(); }
+
+#ifdef INF_EXTERN_TEMPLATE
+extern template class basic_pipe<char>;
+extern template class basic_pipe<wchar_t>;
+#endif
 
 } // namespace inf

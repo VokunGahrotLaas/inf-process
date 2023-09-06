@@ -1,18 +1,13 @@
 // STL
 #include <iostream>
 #include <string>
-// platform specific
+// unistd
 #include <sys/wait.h>
 #include <unistd.h>
-// pipes
-#include "pipes.hpp"
+// inf
+#include <inf/pipe.hpp>
 
-int fork_main();
-int simple_main();
-
-int main() { return simple_main(); }
-
-int fork_main()
+int main()
 {
 	auto pipe = inf::make_pipe();
 
@@ -40,20 +35,6 @@ int fork_main()
 	std::string line;
 
 	pipe.write_close();
-	std::getline(pipe.read(), line);
-
-	std::cout << line << std::endl;
-
-	return 0;
-}
-
-int simple_main()
-{
-	auto pipe = inf::make_pipe();
-
-	pipe.write() << "Hello World!\n";
-
-	std::string line;
 	std::getline(pipe.read(), line);
 
 	std::cout << line << std::endl;
