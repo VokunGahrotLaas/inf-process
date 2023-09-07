@@ -1,11 +1,13 @@
+#ifndef _WIN32
+
 // STL
-#include <iostream>
-#include <string>
+#	include <iostream>
+#	include <string>
 // unistd
-#include <sys/wait.h>
-#include <unistd.h>
+#	include <sys/wait.h>
+#	include <unistd.h>
 // inf
-#include <inf/pipe.hpp>
+#	include <inf/pipe.hpp>
 
 int main()
 {
@@ -41,3 +43,13 @@ int main()
 
 	return 0;
 }
+
+#else
+
+int main()
+{
+	std::cerr << "cannot fork so this test has no counterpart on windows" << std::endl;
+	return 0;
+}
+
+#endif

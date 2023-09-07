@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 // inf
@@ -7,9 +8,13 @@
 
 #ifndef _MSC_VER
 #	define INF_GNU_PURE [[gnu::pure]]
-#	define INF_FDOPEN ::fdopen
 #else
 #	define INF_GNU_PURE
+#endif
+
+#ifndef _WIN32
+#	define INF_FDOPEN ::fdopen
+#else
 #	define INF_FDOPEN ::_fdopen
 #endif
 
