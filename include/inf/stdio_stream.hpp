@@ -17,6 +17,7 @@
 #	define INF_WFDOPEN ::fdopen
 #else
 #	include <io.h>
+#	include <windows.h>
 #	define INF_FDOPEN ::_fdopen
 #	define INF_WFDOPEN ::_wfdopen
 #endif
@@ -61,6 +62,15 @@ constexpr char const* open_mode_str(std::ios_base::openmode mode)
 	return open_mode_strs[open_mode_int(mode)];
 }
 
+INF_GNU_PURE
+constexpr wchar_t const* wopen_mode_str(std::ios_base::openmode mode)
+{
+	constexpr wchar_t const* open_mode_strs[] = {
+		L"", L"a", L"b", L"ab", L"r", L"a+", L"rb", L"a+b", L"w", L"a", L"wb", L"ab", L"w+", L"a+", L"w+b", L"a+b",
+	};
+	return open_mode_strs[open_mode_int(mode)];
+}
+
 template <typename CharT, typename Traits, template <typename CharT2, typename Traits2> class Stream,
 		  std::ios_base::openmode DefaultMode>
 class basic_stdio_stream : public Stream<CharT, Traits>
@@ -75,9 +85,14 @@ public:
 	{}
 
 	explicit basic_stdio_stream(int fd, std::ios_base::openmode mode = DefaultMode)
-		: basic_stdio_stream{ fd >= 0
-								  ? (std::is_same_v<CharT, char> ? INF_FDOPEN : INF_WFDOPEN)(fd, open_mode_str(mode))
-								  : nullptr }
+#ifdef _WIN32
+		: basic_stdio_stream{ fd >= 0 ? (std::is_same_v<CharT, char> ? INF_FDOPEN(fd, open_mode_str(mode))
+																	 : INF_WFDOPEN(fd, wopen_mode_str(mode)))
+									  : nullptr }
+#else
+		: basic_stdio_stream{ fd >= 0 ? INF_FDOPEN(fd, open_mode_str(mode)) : nullptr }
+
+#endif
 	{}
 
 	basic_stdio_stream(basic_stdio_stream const&) = delete;
@@ -118,7 +133,7 @@ public:
 #ifndef _WIN32
 	int native_handle() { return fd(); }
 #else
-	HANDLE native_handle() { return static_cast<HANDLE>(_get_osfhandle(fd())); }
+	HANDLE native_handle() { return (HANDLE)(_get_osfhandle(fd())); }
 #endif
 
 	buf_type& buf() { return buf_; }

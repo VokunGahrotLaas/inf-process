@@ -26,6 +26,7 @@ int main(int argc, char** argv)
 
 	if (is_child)
 	{
+		std::cerr << "Hello std::cerr!" << std::endl;
 		std::cout << "Hello World!" << std::endl;
 		return 0;
 	}
