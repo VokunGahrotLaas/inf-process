@@ -23,11 +23,11 @@ namespace inf
 
 enum class OpenMode : int
 {
-	NONE = 0,
-	APP = 1 << 0,
-	BIN = 1 << 1,
-	IN = 1 << 2,
-	OUT = 1 << 3,
+	MODE_NONE = 0,
+	MODE_APP = 1 << 0,
+	MODE_BIN = 1 << 1,
+	MODE_IN = 1 << 2,
+	MODE_OUT = 1 << 3,
 };
 
 INF_GNU_PURE
@@ -41,11 +41,11 @@ constexpr OpenMode& operator|=(OpenMode& lhs, OpenMode rhs) { return lhs = lhs |
 INF_GNU_PURE
 constexpr int open_mode_int(std::ios_base::openmode mode)
 {
-	OpenMode imode = OpenMode::NONE;
-	if (mode & std::ios_base::app) imode |= OpenMode::APP;
-	if (mode & std::ios_base::binary) imode |= OpenMode::BIN;
-	if (mode & std::ios_base::in) imode |= OpenMode::IN;
-	if (mode & std::ios_base::out) imode |= OpenMode::OUT;
+	OpenMode imode = OpenMode::MODE_NONE;
+	if (mode & std::ios_base::app) imode |= OpenMode::MODE_APP;
+	if (mode & std::ios_base::binary) imode |= OpenMode::MODE_BIN;
+	if (mode & std::ios_base::in) imode |= OpenMode::MODE_IN;
+	if (mode & std::ios_base::out) imode |= OpenMode::MODE_OUT;
 	return static_cast<int>(imode);
 }
 

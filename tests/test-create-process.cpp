@@ -3,13 +3,14 @@
 // STL
 #	include <iomanip>
 #	include <iostream>
+#	include <stringstream>
 #	include <string>
 // CreateProcess
-#	include <windows.h>t
+#	include <windows.h>
 // inf
 #	include <inf/pipe.hpp>
 
-int main()
+int main(int argc, char** argv)
 {
 	using namespace std::string_literals;
 
@@ -26,12 +27,10 @@ int main()
 
 	if (is_child)
 	{
-		pipe.close_read();
+		pipe.read_close();
 		pipe.write() << "Hello World!" << std::endl;
 		return 0;
 	}
-
-	pipe.write_close();
 
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
@@ -40,9 +39,13 @@ int main()
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
 
+	std::ostringstream oss;
+	oss << std::quoted(argv[0]) << " child";
+	std::string cmd = std::move(oss).str();
+
 	// Start the child process.
 	if (!CreateProcess(NULL, // No module name (use command line)
-					   std::quoted(argv[0]) + " child"s, // Command line
+					   cmd.data(), // Command line
 					   NULL, // Process handle not inheritable
 					   NULL, // Thread handle not inheritable
 					   FALSE, // Set handle inheritance to FALSE
@@ -56,6 +59,8 @@ int main()
 		std::cerr << "CreateProcess failed (" << GetLastError() << ")." << std::endl;
 		return 1;
 	}
+
+	pipe.write_close();
 
 	// Wait until child process exits.
 	WaitForSingleObject(pi.hProcess, INFINITE);

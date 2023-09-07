@@ -1,6 +1,7 @@
 
 std = c++20
-O=2
+O = 2
+static = true
 
 CXX = g++
 CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include
@@ -9,12 +10,21 @@ LIB_CXXFLAGS = ${CXXFLAGS} -fPIC
 LIB_LDFLAGS = ${LDFLAGS} -shared
 LIB_ARFLAGS = rcs
 TEST_CXXFLAGS = ${CXXFLAGS} -DINF_EXTERN_TEMPLATE
-TEST_LDFLAGS = ${LDFLAGS} -L. -linf
-LD_LIBRARY_PATH = .
+TEST_LDFLAGS = ${LDFLAGS} -L.
 
 SRC = ${wildcard src/*.cpp}
 OBJ = ${SRC:.cpp=.o}
 LIB = libinf.so libinf-static.a
+
+ifeq (${static},true)
+TEST_LDFLAGS += -linf-static
+LD_LIBRARY_PATH =
+else ifeq (${static},false)
+TEST_LDFLAGS += -linf
+LD_LIBRARY_PATH = .
+else
+$(error static must be true or false)
+endif
 
 TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_OBJ = ${TEST_SRC:.cpp=.o}
