@@ -7,7 +7,6 @@
 // inf
 #include <inf/exceptions.hpp>
 #include <inf/stdio_stream.hpp>
-#include <utility>
 
 namespace inf
 {
@@ -91,7 +90,11 @@ inline basic_pipe<CharT, Traits> make_basic_pipe()
 {
 	int raw_pipe[2] = { -1, -1 };
 	int old_errno = errno;
+#ifdef _MSC_VER
+	bool success = ::_pipe(raw_pipe, 256, 0) >= 0;
+#else
 	bool success = ::pipe(raw_pipe) >= 0;
+#endif
 	int failure_errno = errno;
 	errno = old_errno;
 	if (!success) throw errno_error("pipe", failure_errno);

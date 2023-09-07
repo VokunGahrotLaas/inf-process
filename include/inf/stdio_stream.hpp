@@ -5,6 +5,14 @@
 // inf
 #include <inf/stdiobuf.hpp>
 
+#ifndef _MSC_VER
+#	define INF_GNU_PURE [[gnu::pure]]
+#	define INF_FDOPEN ::fdopen
+#else
+#	define INF_GNU_PURE
+#	define INF_FDOPEN ::_fdopen
+#endif
+
 namespace inf
 {
 
@@ -17,16 +25,15 @@ enum class OpenMode : int
 	OUT = 1 << 3,
 };
 
-[[gnu::pure]]
-constexpr OpenMode
-operator|(OpenMode lhs, OpenMode rhs)
+INF_GNU_PURE
+constexpr OpenMode operator|(OpenMode lhs, OpenMode rhs)
 {
 	return static_cast<OpenMode>(static_cast<int>(lhs) | static_cast<int>(rhs));
 }
 
 constexpr OpenMode& operator|=(OpenMode& lhs, OpenMode rhs) { return lhs = lhs | rhs; }
 
-[[gnu::pure]]
+INF_GNU_PURE
 constexpr int open_mode_int(std::ios_base::openmode mode)
 {
 	OpenMode imode = OpenMode::NONE;
@@ -37,7 +44,7 @@ constexpr int open_mode_int(std::ios_base::openmode mode)
 	return static_cast<int>(imode);
 }
 
-[[gnu::pure]]
+INF_GNU_PURE
 constexpr char const* open_mode_str(std::ios_base::openmode mode)
 {
 	constexpr char const* open_mode_strs[] = {
@@ -60,7 +67,7 @@ public:
 	{}
 
 	explicit basic_stdio_stream(int fd, std::ios_base::openmode mode = DefaultMode)
-		: basic_stdio_stream{ fd >= 0 ? ::fdopen(fd, open_mode_str(mode)) : nullptr }
+		: basic_stdio_stream{ fd >= 0 ? INF_FDOPEN(fd, open_mode_str(mode)) : nullptr }
 	{}
 
 	basic_stdio_stream(basic_stdio_stream const&) = delete;

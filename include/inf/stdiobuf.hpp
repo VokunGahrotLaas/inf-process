@@ -7,6 +7,10 @@
 namespace inf
 {
 
+#ifdef _MSC_VER
+#	pragma pack(1)
+#endif
+
 template <typename CharT, typename Traits = std::char_traits<CharT>>
 class basic_stdiobuf : public std::basic_streambuf<CharT, Traits>
 {
@@ -45,6 +49,8 @@ public:
 	{
 		if (file_ != nullptr) std::fclose(file_);
 	}
+
+	basic_stdiobuf& operator=(basic_stdiobuf const&) = delete;
 
 	basic_stdiobuf& operator=(basic_stdiobuf&& other)
 	{
@@ -123,8 +129,8 @@ protected:
 			whence = SEEK_CUR;
 		else
 			whence = SEEK_END;
-#if _FILE_OFFSET_BITS == 64 || _POSIX_C_SOURCE >= 200'112L
-		if (!::fseeko(file_, off, whence)) ret = std::streampos(::ftello(file_));
+#if (defined(_FILE_OFFSET_BIT) && _FILE_OFFSET_BITS == 64) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200'112L)
+		if (!::fseeko(file_, static_cast<off_t>(off), whence)) ret = std::streampos(::ftello(file_));
 #elif defined(_WIN32)
 		if (!::_fseeki64(file_, off, whence)) ret = std::streampos(::_ftelli64(file_));
 #else
@@ -168,7 +174,7 @@ inline auto stdiobuf::syncputc(int_type c) -> int_type
 template <>
 inline std::streamsize stdiobuf::xsgetn(char* s, std::streamsize n)
 {
-	std::streamsize ret = std::fread(s, 1, n, file_);
+	std::streamsize ret = static_cast<std::streamsize>(std::fread(s, 1, static_cast<std::size_t>(n), file_));
 	if (ret > 0)
 		unget_buf_ = traits_type::to_int_type(s[ret - 1]);
 	else
@@ -179,7 +185,7 @@ inline std::streamsize stdiobuf::xsgetn(char* s, std::streamsize n)
 template <>
 inline std::streamsize stdiobuf::xsputn(char const* s, std::streamsize n)
 {
-	return std::fwrite(s, 1, n, file_);
+	return static_cast<std::streamsize>(std::fwrite(s, 1, static_cast<std::size_t>(n), file_));
 }
 
 template <>
@@ -197,7 +203,7 @@ inline auto wstdiobuf::syncungetc(int_type c) -> int_type
 template <>
 inline auto wstdiobuf::syncputc(int_type c) -> int_type
 {
-	return std::putwc(c, file_);
+	return std::putwc(traits_type::to_char_type(c), file_);
 }
 
 template <>
@@ -227,7 +233,7 @@ inline std::streamsize wstdiobuf::xsputn(wchar_t const* s, std::streamsize n)
 	const int_type eof = traits_type::eof();
 	while (n--)
 	{
-		if (traits_type::eq_int_type(this->syncputc(*s++), eof)) break;
+		if (traits_type::eq_int_type(this->syncputc(traits_type::to_int_type(*s++)), eof)) break;
 		++ret;
 	}
 	return ret;
