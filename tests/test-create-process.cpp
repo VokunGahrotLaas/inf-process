@@ -1,11 +1,11 @@
 #ifdef _WIN32
 
 // STL
+#	include <cstdlib>
 #	include <iomanip>
 #	include <iostream>
 #	include <sstream>
 #	include <string>
-#	include <cstdlib>
 // CreateProcess
 #	include <windows.h>
 // inf
@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 	using namespace std::string_literals;
 
 	bool is_parent = argc == 1;
-	bool is_child = argc == 3;
+	bool is_child = argc == 2 && argv[1] == "child"s;
 
 	if (!is_parent && !is_child)
 	{
@@ -26,11 +26,7 @@ int main(int argc, char** argv)
 
 	if (is_child)
 	{
-		int read = std::atoi(argv[1]);
-		int write = std::atoi(argv[2]);
-		inf::pipe pipe{};
-		pipe.read_close();
-		pipe.write() << "Hello World!" << std::endl;
+		std::cout << "Hello World!" << std::endl;
 		return 0;
 	}
 
@@ -41,10 +37,14 @@ int main(int argc, char** argv)
 
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
+	si.dwFlags = STARTF_USESTDHANDLES;
+	si.hStdInput = nullptr;
+	si.hStdOutput = pipe.write().native_handle();
+	si.hStdError = nullptr;
 	ZeroMemory(&pi, sizeof(pi));
 
 	std::ostringstream oss;
-	oss << std::quoted(argv[0]) << ' ' << pipe.read().fd() << ' ' << pipe.write().fd();
+	oss << std::quoted(argv[0]) << " child";
 	std::string cmd = std::move(oss).str();
 
 	// Start the child process.
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 	std::string line;
 	std::getline(pipe.read(), line);
 
-	std::cout << line << std::endl;
+	std::cout << "pipe: " << line << std::endl;
 
 	return 0;
 }

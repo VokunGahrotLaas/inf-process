@@ -14,8 +14,11 @@
 
 #ifndef _WIN32
 #	define INF_FDOPEN ::fdopen
+#	define INF_WFDOPEN ::fdopen
 #else
+#	include <io.h>
 #	define INF_FDOPEN ::_fdopen
+#	define INF_WFDOPEN ::_wfdopen
 #endif
 
 namespace inf
@@ -72,7 +75,9 @@ public:
 	{}
 
 	explicit basic_stdio_stream(int fd, std::ios_base::openmode mode = DefaultMode)
-		: basic_stdio_stream{ fd >= 0 ? INF_FDOPEN(fd, open_mode_str(mode)) : nullptr }
+		: basic_stdio_stream{ fd >= 0
+								  ? (std::is_same_v<CharT, char> ? INF_FDOPEN : INF_WFDOPEN)(fd, open_mode_str(mode))
+								  : nullptr }
 	{}
 
 	basic_stdio_stream(basic_stdio_stream const&) = delete;
@@ -109,6 +114,12 @@ public:
 	std::FILE* file() { return buf_.file(); }
 
 	int fd() { return file() != nullptr ? ::fileno(file()) : -1; }
+
+#ifndef _WIN32
+	int native_handle() { return fd(); }
+#else
+	HANDLE native_handle() { return static_cast<HANDLE>(_get_osfhandle(fd())); }
+#endif
 
 	buf_type& buf() { return buf_; }
 
