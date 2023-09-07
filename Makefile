@@ -9,19 +9,23 @@ LDFLAGS =
 LIB_CXXFLAGS = ${CXXFLAGS} -fPIC
 LIB_LDFLAGS = ${LDFLAGS} -shared
 LIB_ARFLAGS = rcs
-TEST_CXXFLAGS = ${CXXFLAGS} -DINF_EXTERN_TEMPLATE
+TEST_CXXFLAGS = ${CXXFLAGS}
 TEST_LDFLAGS = ${LDFLAGS} -L.
 
 SRC = ${wildcard src/*.cpp}
 OBJ = ${SRC:.cpp=.o}
-LIB = libinf.so libinf-static.a
+LIBS = libinf-static.a libinf.so
 
 ifeq (${static},true)
+TEST_CXXFLAGS +=
 TEST_LDFLAGS += -linf-static
 LD_LIBRARY_PATH =
+LIB = libinf-static.a
 else ifeq (${static},false)
+TEST_CXXFLAGS += -DINF_EXTERN_TEMPLATE
 TEST_LDFLAGS += -linf
 LD_LIBRARY_PATH = .
+LIB = libinf.so
 else
 $(error static must be true or false)
 endif
@@ -45,7 +49,7 @@ phony_explicit:
 src/%.o: src/%.cpp
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-tests/%.out: tests/%.o
+tests/%.out: tests/%.o | ${LIB}
 	${CXX} -o $@ $< ${TEST_LDFLAGS}
 
 tests/%.o: tests/%.cpp
@@ -58,7 +62,7 @@ else
 	LD_LIBRARY_PATH=${LD_LIBRARY_PATH} ./$<
 endif
 
-run_tests: ${addprefix run_test_,${subst tests/test-,,${basename ${TEST_SRC}}}}
+run_tests: ${TEST_EXEC} .WAIT ${addprefix run_test_,${subst tests/test-,,${basename ${TEST_SRC}}}}
 
 clean:
-	${RM} ${OBJ} ${LIB} ${TEST_OBJ} ${TEST_EXEC}
+	${RM} ${OBJ} ${LIBS} ${TEST_OBJ} ${TEST_EXEC}
