@@ -30,6 +30,13 @@ public:
 		, write_{ nullptr }
 	{}
 
+	explicit basic_pipe(int read, int write)
+		: read_{ read }
+		, write_{ write }
+	{
+		read_.tie(&write_);
+	}
+
 	basic_pipe(basic_pipe const&) = delete;
 	basic_pipe& operator=(basic_pipe const&) = delete;
 
@@ -78,13 +85,6 @@ public:
 	friend inline wpipe make_wpipe();
 
 private:
-	basic_pipe(int read, int write)
-		: read_{ read }
-		, write_{ write }
-	{
-		read_.tie(&write_);
-	}
-
 	stdio_istream read_;
 	stdio_ostream write_;
 };

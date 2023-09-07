@@ -5,6 +5,7 @@
 #	include <iostream>
 #	include <sstream>
 #	include <string>
+#	include <cstdlib>
 // CreateProcess
 #	include <windows.h>
 // inf
@@ -15,7 +16,7 @@ int main(int argc, char** argv)
 	using namespace std::string_literals;
 
 	bool is_parent = argc == 1;
-	bool is_child = argc == 2 && argv[1] == "child"s;
+	bool is_child = argc == 3;
 
 	if (!is_parent && !is_child)
 	{
@@ -23,14 +24,17 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	auto pipe = inf::make_pipe();
-
 	if (is_child)
 	{
+		int read = std::atoi(argv[1]);
+		int write = std::atoi(argv[2]);
+		inf::pipe pipe{};
 		pipe.read_close();
 		pipe.write() << "Hello World!" << std::endl;
 		return 0;
 	}
+
+	auto pipe = inf::make_pipe();
 
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
@@ -40,7 +44,7 @@ int main(int argc, char** argv)
 	ZeroMemory(&pi, sizeof(pi));
 
 	std::ostringstream oss;
-	oss << std::quoted(argv[0]) << " child";
+	oss << std::quoted(argv[0]) << ' ' << pipe.read().fd() << ' ' << pipe.write().fd();
 	std::string cmd = std::move(oss).str();
 
 	// Start the child process.
