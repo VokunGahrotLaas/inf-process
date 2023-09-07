@@ -12,7 +12,7 @@ int main()
 	std::string line;
 	std::getline(pipe.read(), line);
 
-	std::cout << line << std::endl;
+	std::cout << "pipe: " << line << std::endl;
 
 	return 0;
 }

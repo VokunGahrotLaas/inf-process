@@ -20,13 +20,12 @@ int main(int argc, char** argv)
 
 	if (!is_parent && !is_child)
 	{
-		printf("Usage: %s [child]\n", argv[0]);
+		std::cerr << "Usage: " << argv[0] << " [child]" << std::endl;
 		return 1;
 	}
 
 	if (is_child)
 	{
-		std::cerr << "Hello std::cerr!" << std::endl;
 		std::cout << "Hello World!" << std::endl;
 		return 0;
 	}
@@ -39,9 +38,9 @@ int main(int argc, char** argv)
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
 	si.dwFlags = STARTF_USESTDHANDLES;
-	si.hStdInput = nullptr;
+	si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 	si.hStdOutput = pipe.write().native_handle();
-	si.hStdError = nullptr;
+	si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 	ZeroMemory(&pi, sizeof(pi));
 
 	std::ostringstream oss;
@@ -53,7 +52,7 @@ int main(int argc, char** argv)
 					   cmd.data(), // Command line
 					   NULL, // Process handle not inheritable
 					   NULL, // Thread handle not inheritable
-					   FALSE, // Set handle inheritance to FALSE
+					   TRUE, // Set handle inheritance to TRUE
 					   0, // No creation flags
 					   NULL, // Use parent's environment block
 					   NULL, // Use parent's starting directory
