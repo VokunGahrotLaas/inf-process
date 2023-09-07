@@ -9,17 +9,22 @@ LIB_CXXFLAGS = ${CXXFLAGS} -fPIC
 LIB_LDFLAGS = ${LDFLAGS} -shared
 LIB_ARFLAGS = rcs
 TEST_CXXFLAGS = ${CXXFLAGS} -DINF_EXTERN_TEMPLATE
-TEST_LDFLAGS = ${LDFLAGS} -L. -linf-static
+TEST_LDFLAGS = ${LDFLAGS} -L. -linf
+LD_LIBRARY_PATH = .
 
 SRC = ${wildcard src/*.cpp}
 OBJ = ${SRC:.cpp=.o}
 LIB = libinf.so libinf-static.a
 
-TEST_SRC = ${wildcard tests/*.cpp}
+TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_OBJ = ${TEST_SRC:.cpp=.o}
 TEST_EXEC = ${TEST_OBJ:.o=.out}
 
 all: ${LIB} ${TEST_EXEC} ${TEST_OBJ}
+
+.PHONY: all phony_explicit run_tests clean
+
+phony_explicit:
 
 %.a: ${OBJ}
 	${AR} ${LIB_ARFLAGS} $@ $^
@@ -36,7 +41,14 @@ tests/%.out: tests/%.o
 tests/%.o: tests/%.cpp
 	${CXX} ${TEST_CXXFLAGS} -o $@ -c $<
 
+run_test_%: tests/test-%.out phony_explicit
+ifeq (${LD_LIBRARY_PATH},)
+	./$<
+else
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH} ./$<
+endif
+
+run_tests: ${addprefix run_test_,${subst tests/test-,,${basename ${TEST_SRC}}}}
+
 clean:
 	${RM} ${OBJ} ${LIB} ${TEST_OBJ} ${TEST_EXEC}
-
-.PHONY: all clean

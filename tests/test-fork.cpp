@@ -28,6 +28,8 @@ int main()
 		return 0;
 	}
 
+	pipe.write_close();
+
 	if (::waitpid(pid, NULL, 0) < 0)
 	{
 		std::cerr << "could not waitpid" << std::endl;
@@ -35,8 +37,6 @@ int main()
 	}
 
 	std::string line;
-
-	pipe.write_close();
 	std::getline(pipe.read(), line);
 
 	std::cout << line << std::endl;
@@ -45,6 +45,8 @@ int main()
 }
 
 #else
+
+#	include <iostream>
 
 int main()
 {
