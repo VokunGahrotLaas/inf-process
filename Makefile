@@ -3,7 +3,7 @@ std = c++20
 O = 2
 static = true
 
-CXX = g++
+CXX ?= g++
 CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include
 LDFLAGS =
 LIB_CXXFLAGS = ${CXXFLAGS} -fPIC
@@ -37,6 +37,8 @@ TEST_EXEC = ${TEST_OBJ:.o=.out}
 all: ${LIB} ${TEST_EXEC} ${TEST_OBJ}
 
 .PHONY: all phony_explicit run_tests clean
+
+.WAIT:
 
 phony_explicit:
 
