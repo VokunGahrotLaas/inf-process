@@ -1,6 +1,13 @@
-# <inf/pipe.hpp>
+# stdio-stream
 
-C++ wrapper for the POSIX pipe() function.
+C++ wrapper for C io / POSIX / Windows functions.
+
+Currently supports:
+
+* Wrapping a fd / HANDLE / FILE* in a inf::stdio_\[i]\[o]stream.
+
+* Wrapping a pipe() / _pipe() in a inf::pipe;
+
 
 ## Credits / Sources
 
