@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstdlib>
+#include <cerrno>
 #include <iostream>
-#include <sstream>
 // inf
+#include <inf/exceptions.hpp>
 #include <inf/stdiobuf.hpp>
 
 #ifndef _MSC_VER
@@ -13,13 +13,19 @@
 #endif
 
 #ifndef _WIN32
+#	include <unistd.h>
 #	define INF_FDOPEN ::fdopen
 #	define INF_WFDOPEN ::fdopen
+#	define INF_DUP ::dup
+#	define INF_DUP2 ::dup2
 #else
+#	include <winbase.h>
 #	include <io.h>
-#	include <windows.h>
+#	include <fcntl.h>
 #	define INF_FDOPEN ::_fdopen
 #	define INF_WFDOPEN ::_wfdopen
+#	define INF_DUP ::_dup
+#	define INF_DUP2 ::_dup2
 #endif
 
 namespace inf
@@ -52,6 +58,18 @@ constexpr int open_mode_int(std::ios_base::openmode mode)
 	if (mode & std::ios_base::out) imode |= OpenMode::MODE_OUT;
 	return static_cast<int>(imode);
 }
+
+#ifdef _WIN32
+INF_GNU_PURE
+constexpr int open_mode_winflags(std::ios_base::openmode mode, int o_text)
+{
+	int flags = 0;
+	if (mode & std::ios_base::app) flags |= _O_APPEND;
+	if (!(mode & std::ios_base::binary)) flags |= o_text;
+	if ((mode & std::ios_base::in) && !(mode & std::ios_base::out)) flags |= _O_RDONLY;
+	return flag;
+}
+#endif
 
 INF_GNU_PURE
 constexpr char const* open_mode_str(std::ios_base::openmode mode)
@@ -94,6 +112,13 @@ public:
 
 #endif
 	{}
+
+#ifdef _WIN32
+	explicit basic_stdio_stream(HANDLE handle, std::ios_base::openmode mode = DefaultMode)
+		: basic_stdio_stream{ _open_osfhandle(
+			(intptr_t)(handle), open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT))) }
+	{}
+#endif
 
 	basic_stdio_stream(basic_stdio_stream const&) = delete;
 
@@ -138,7 +163,34 @@ public:
 
 	buf_type& buf() { return buf_; }
 
+	void close() { buf_.close(); }
+
+	basic_stdio_stream dup(std::ios_base::openmode mode = DefaultMode) const
+	{
+		int old_errno = errno;
+		errno = 0;
+		int new_fd = INF_DUP(private_fd());
+		int new_errno = errno;
+		errno = old_errno;
+		if (new_fd < 0) throw inf::errno_error("dup", new_errno);
+		return basic_stdio_stream(new_fd, mode);
+	}
+
+	void dup(basic_stdio_stream& other) const
+	{
+		int old_errno = errno;
+		errno = 0;
+		int res = INF_DUP2(private_fd(), other.fd());
+		int new_errno = errno;
+		errno = old_errno;
+		if (res < 0) throw inf::errno_error("dup2", new_errno);
+	}
+
 private:
+	std::FILE* private_file() const { return buf_.private_file(); }
+
+	int private_fd() const { return private_file() != nullptr ? ::fileno(private_file()) : -1; }
+
 	buf_type buf_;
 };
 

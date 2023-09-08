@@ -36,10 +36,10 @@ TEST_EXEC = ${TEST_OBJ:.o=.out}
 
 all: ${LIB} ${TEST_EXEC} ${TEST_OBJ}
 
+# special targets
 .PHONY: all phony_explicit run_tests clean
-
 .WAIT:
-
+.SECONDARY:
 phony_explicit:
 
 %.a: ${OBJ}
@@ -51,7 +51,7 @@ phony_explicit:
 src/%.o: src/%.cpp
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-tests/%.out: tests/%.o | ${LIB}
+tests/%.out: tests/%.o ${LIB}
 	${CXX} -o $@ $< ${TEST_LDFLAGS}
 
 tests/%.o: tests/%.cpp

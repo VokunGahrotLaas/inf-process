@@ -7,6 +7,10 @@
 namespace inf
 {
 
+template <typename CharT, typename Traits, template <typename CharT2, typename Traits2> class Stream,
+		  std::ios_base::openmode DefaultMode>
+class basic_stdio_stream;
+
 #ifdef _MSC_VER
 #	pragma pack(1)
 #endif
@@ -21,6 +25,10 @@ public:
 	using int_type = typename traits_type::int_type;
 	using off_type = typename traits_type::off_type;
 	using pos_type = typename traits_type::pos_type;
+
+	template <typename CharT2, typename Traits2, template <typename CharT3, typename Traits3> class Stream,
+			  std::ios_base::openmode DefaultMode>
+	friend class basic_stdio_stream;
 
 	basic_stdiobuf()
 		: super_type{}
@@ -45,10 +53,7 @@ public:
 		other.unget_buf_ = traits_type::eof();
 	}
 
-	~basic_stdiobuf() override
-	{
-		if (file_ != nullptr) std::fclose(file_);
-	}
+	~basic_stdiobuf() override { close(); }
 
 	basic_stdiobuf& operator=(basic_stdiobuf const&) = delete;
 
@@ -72,6 +77,12 @@ public:
 
 	bool is_open() const { return file_ != nullptr; }
 
+	void close()
+	{
+		if (file_ != nullptr) std::fclose(file_);
+		file_ = nullptr;
+	}
+
 protected:
 	int_type syncgetc();
 
@@ -86,7 +97,7 @@ protected:
 	int_type pbackfail(int_type c = traits_type::eof()) override
 	{
 		int_type ret;
-		const int_type eof = traits_type::eof();
+		int_type const eof = traits_type::eof();
 
 		// Check if the unget or putback was requested
 		if (traits_type::eq_int_type(c, eof)) // unget
@@ -146,6 +157,8 @@ protected:
 	}
 
 private:
+	std::FILE* private_file() const { return file_; }
+
 	std::FILE* file_;
 	int_type unget_buf_;
 };
@@ -210,7 +223,7 @@ template <>
 inline std::streamsize wstdiobuf::xsgetn(wchar_t* s, std::streamsize n)
 {
 	std::streamsize ret = 0;
-	const int_type eof = traits_type::eof();
+	int_type const eof = traits_type::eof();
 	while (n--)
 	{
 		int_type c = this->syncgetc();
@@ -230,7 +243,7 @@ template <>
 inline std::streamsize wstdiobuf::xsputn(wchar_t const* s, std::streamsize n)
 {
 	std::streamsize ret = 0;
-	const int_type eof = traits_type::eof();
+	int_type const eof = traits_type::eof();
 	while (n--)
 	{
 		if (traits_type::eq_int_type(this->syncputc(traits_type::to_int_type(*s++)), eof)) break;

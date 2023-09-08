@@ -4,10 +4,13 @@ C++ wrapper for C io / POSIX / Windows functions.
 
 Currently supports:
 
-* Wrapping a fd / HANDLE / FILE* in a inf::stdio_\[i]\[o]stream.
+* Wrapping a FILE* in a inf::stdio_stream.
 
-* Wrapping a pipe() / _pipe() in a inf::pipe;
+* Creating a inf::stdio_stream from a POSIX fd / Windows HANDLE.
 
+* Using dup() and dup2() on inf::stdio_stream.
+
+* Wrapping a pipe() in a inf::pipe.
 
 ## Credits / Sources
 

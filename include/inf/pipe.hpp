@@ -5,6 +5,8 @@
 // for ::pipe
 #ifdef _WIN32
 #	include <io.h>
+#	include <fcntl.h>
+
 #else
 #	include <unistd.h>
 #endif
@@ -90,12 +92,13 @@ private:
 };
 
 template <typename CharT, typename Traits = std::char_traits<CharT>>
-inline basic_pipe<CharT, Traits> make_basic_pipe()
+inline basic_pipe<CharT, Traits> make_basic_pipe([[maybe_unused]] unsigned size = 1'024)
 {
 	int fds[2] = { -1, -1 };
 	int old_errno = errno;
+	errno = 0;
 #ifdef _WIN32
-	bool success = ::_pipe(fds, 1'024, 0) >= 0;
+	bool success = ::_pipe(fds, size, _O_BINARY) >= 0;
 #else
 	bool success = ::pipe(fds) >= 0;
 #endif
