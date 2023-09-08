@@ -123,13 +123,6 @@ public:
 	}
 #endif
 
-#ifdef _WIN32
-	explicit basic_stdio_stream(HANDLE handle, std::ios_base::openmode mode = DefaultMode)
-		: basic_stdio_stream{ _open_osfhandle(
-			(intptr_t)handle, open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT))) }
-	{}
-#endif
-
 	basic_stdio_stream(basic_stdio_stream const&) = delete;
 
 	basic_stdio_stream(basic_stdio_stream&& other)
