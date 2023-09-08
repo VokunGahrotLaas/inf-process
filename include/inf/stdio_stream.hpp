@@ -19,7 +19,7 @@
 #	define INF_DUP ::dup
 #	define INF_DUP2 ::dup2
 #else
-#	include <winbase.h>
+#	include <windows.h>
 #	include <io.h>
 #	include <fcntl.h>
 #	define INF_FDOPEN ::_fdopen
@@ -67,7 +67,7 @@ constexpr int open_mode_winflags(std::ios_base::openmode mode, int o_text)
 	if (mode & std::ios_base::app) flags |= _O_APPEND;
 	if (!(mode & std::ios_base::binary)) flags |= o_text;
 	if ((mode & std::ios_base::in) && !(mode & std::ios_base::out)) flags |= _O_RDONLY;
-	return flag;
+	return flags;
 }
 #endif
 
@@ -102,21 +102,31 @@ public:
 		, buf_{ file }
 	{}
 
-	explicit basic_stdio_stream(int fd, std::ios_base::openmode mode = DefaultMode)
+	static basic_stdio_stream from_fd(int fd, std::ios_base::openmode mode = DefaultMode)
+	{
 #ifdef _WIN32
-		: basic_stdio_stream{ fd >= 0 ? (std::is_same_v<CharT, char> ? INF_FDOPEN(fd, open_mode_str(mode))
-																	 : INF_WFDOPEN(fd, wopen_mode_str(mode)))
-									  : nullptr }
+		return basic_stdio_stream{ fd >= 0 ? (std::is_same_v<CharT, char> ? INF_FDOPEN(fd, open_mode_str(mode))
+
+																		  : INF_WFDOPEN(fd, wopen_mode_str(mode)))
+										   : nullptr };
 #else
-		: basic_stdio_stream{ fd >= 0 ? INF_FDOPEN(fd, open_mode_str(mode)) : nullptr }
+		return basic_stdio_stream{ fd >= 0 ? INF_FDOPEN(fd, open_mode_str(mode)) : nullptr };
 
 #endif
-	{}
+	}
+
+#ifdef _WIN32
+	static basic_stdio_stream from_handle(HANDLE handle, std::ios_base::openmode mode = DefaultMode)
+	{
+		return basic_stdio_stream::from_fd(_open_osfhandle(
+			(intptr_t)handle, open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT))));
+	}
+#endif
 
 #ifdef _WIN32
 	explicit basic_stdio_stream(HANDLE handle, std::ios_base::openmode mode = DefaultMode)
 		: basic_stdio_stream{ _open_osfhandle(
-			(intptr_t)(handle), open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT))) }
+			(intptr_t)handle, open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT))) }
 	{}
 #endif
 
@@ -158,7 +168,7 @@ public:
 #ifndef _WIN32
 	int native_handle() { return fd(); }
 #else
-	HANDLE native_handle() { return (HANDLE)(_get_osfhandle(fd())); }
+	HANDLE native_handle() { return (HANDLE)_get_osfhandle(fd()); }
 #endif
 
 	buf_type& buf() { return buf_; }
@@ -173,7 +183,7 @@ public:
 		int new_errno = errno;
 		errno = old_errno;
 		if (new_fd < 0) throw inf::errno_error("dup", new_errno);
-		return basic_stdio_stream(new_fd, mode);
+		return basic_stdio_stream::from_fd(new_fd, mode);
 	}
 
 	void dup(basic_stdio_stream& other) const

@@ -4,9 +4,8 @@
 #include <cerrno>
 // for ::pipe
 #ifdef _WIN32
-#	include <io.h>
 #	include <fcntl.h>
-
+#	include <io.h>
 #else
 #	include <unistd.h>
 #endif
@@ -27,14 +26,17 @@ template <typename CharT, typename Traits>
 class basic_pipe
 {
 public:
+	using istream_type = basic_stdio_istream<CharT, Traits>;
+	using ostream_type = basic_stdio_ostream<CharT, Traits>;
+
 	basic_pipe()
 		: read_{ nullptr }
 		, write_{ nullptr }
 	{}
 
 	explicit basic_pipe(int read, int write)
-		: read_{ read }
-		, write_{ write }
+		: read_{ istream_type::from_fd(read) }
+		, write_{ ostream_type::from_fd(write) }
 	{
 		read_.tie(&write_);
 	}
@@ -77,9 +79,9 @@ public:
 		return old_file != nullptr;
 	}
 
-	stdio_istream& read() { return read_; }
+	istream_type& read() { return read_; }
 
-	stdio_ostream& write() { return write_; }
+	ostream_type& write() { return write_; }
 
 	template <typename CharT2, typename Traits2>
 	friend inline basic_pipe<CharT2, Traits2> make_basic_pipe();
@@ -87,8 +89,8 @@ public:
 	friend inline wpipe make_wpipe();
 
 private:
-	stdio_istream read_;
-	stdio_ostream write_;
+	istream_type read_;
+	ostream_type write_;
 };
 
 template <typename CharT, typename Traits = std::char_traits<CharT>>
