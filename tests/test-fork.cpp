@@ -23,12 +23,12 @@ int main()
 
 	if (pid == 0)
 	{
-		pipe.read_close();
-		pipe.write() << "Hello World!\n";
+		pipe.read.close();
+		pipe.write << "Hello World!" << std::endl;
 		return 0;
 	}
 
-	pipe.write_close();
+	pipe.write.close();
 
 	if (::waitpid(pid, NULL, 0) < 0)
 	{
@@ -37,7 +37,7 @@ int main()
 	}
 
 	std::string line;
-	std::getline(pipe.read(), line);
+	std::getline(pipe.read, line);
 
 	std::cout << "pipe: " << line << std::endl;
 

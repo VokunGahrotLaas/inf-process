@@ -7,11 +7,9 @@ int main()
 {
 	auto pipe = inf::make_pipe();
 
-	auto dup_read = pipe.read().dup();
-	dup_read.tie(&pipe.write());
-	pipe.read_close();
+	auto dup_read = pipe.read.safe_dup();
 
-	pipe.write() << "Hello World!\n";
+	pipe.write << "Hello World!" << std::endl;
 
 	std::string line;
 	std::getline(dup_read, line);

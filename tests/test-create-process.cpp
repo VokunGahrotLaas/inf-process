@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 	si.cb = sizeof(si);
 	si.dwFlags = STARTF_USESTDHANDLES;
 	si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-	si.hStdOutput = pipe.write().native_handle();
+	si.hStdOutput = pipe.write.native_handle();
 	si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 	ZeroMemory(&pi, sizeof(pi));
 
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	pipe.write_close();
+	pipe.write.close();
 
 	// Wait until child process exits.
 	WaitForSingleObject(pi.hProcess, INFINITE);
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	CloseHandle(pi.hThread);
 
 	std::string line;
-	std::getline(pipe.read(), line);
+	std::getline(pipe.read, line);
 
 	std::cout << "pipe: " << line << std::endl;
 

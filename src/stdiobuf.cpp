@@ -1,3 +1,4 @@
+#define INF_STATIC_STDIOBUF
 #include <inf/stdiobuf.hpp>
 
 namespace inf

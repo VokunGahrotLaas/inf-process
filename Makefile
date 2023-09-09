@@ -1,15 +1,8 @@
 
 std = c++20
 O = 2
-windows = false
-static = false
-ifeq (${static},true)
-static_lib = true
-static_test = true
-else
-static_lib = false
-static_test = false
-endif
+target = linux
+type = shared
 prefix =
 
 CXX ?= g++
@@ -19,58 +12,53 @@ LIB_CXXFLAGS = ${CXXFLAGS}
 LIB_LDFLAGS = ${LDFLAGS}
 LIB_ARFLAGS = rcs
 TEST_CXXFLAGS = ${CXXFLAGS}
-TEST_LDFLAGS = ${LDFLAGS} -L.
+TEST_LDFLAGS = ${LDFLAGS}
 
 SRC = ${wildcard src/*.cpp}
 OBJ = ${SRC:.cpp=.o}
 LIBS = libinf-static.a libinf.so libinf.dll
 
-ifeq (${static_test},true)
-TEST_LDFLAGS += -static
-else ifeq (${static_test},false)
+ifeq (${target},mingw)
+LIB_STATIC = libinf-static.a
+LIB_SHARED = libinf.dll
+else ifeq (${target},linux)
+LIB_STATIC = libinf-static.a
+LIB_SHARED = libinf.so
 else
-$(error static_test must be true or false)
+	$(error target must be mingw or linux)
 endif
 
-ifeq (${static_lib},true)
-TEST_LDFLAGS += -linf-static
-LIB = libinf-static.a
-else ifeq (${static_lib},false)
-LIB_CXXFLAGS += -fPIC
-LIB_LDFLAGS += -shared
-TEST_CXXFLAGS += -DINF_EXTERN_TEMPLATE
-TEST_LDFLAGS += -linf
+ifeq (${type},static)
+	TEST_LDFLAGS += -L. -linf-static
+	LIB = ${LIB_STATIC}
+	ifeq (${target},mingw)
+		prefix += WINEPATH=/usr/x86_64-w64-mingw32/bin
+	endif
+else ifeq (${type},shared)
+	LIB_CXXFLAGS += -fPIC
+	LIB_LDFLAGS += -shared
+	TEST_LDFLAGS += -L. -linf
+	LIB = ${LIB_SHARED}
+	ifeq (${target},mingw)
+		prefix += WINEPATH=.\;/usr/x86_64-w64-mingw32/bin
+	else ifeq (${target},linux)
+		prefix += LD_LIBRARY_PATH=.
+	endif
+else ifeq (${type},header_only)
+	TEST_CXXFLAGS += -DINF_HEADER_ONLY
+	LIB =
+	ifeq (${target},mingw)
+		prefix += WINEPATH=/usr/x86_64-w64-mingw32/bin
+	endif
 else
-$(error static_lib must be true or false)
-endif
-
-ifeq (${windows},true)
-ifeq (${static_lib},false)
-LIB = libinf.dll
-ifeq (${static_test},false)
-prefix += WINEPATH=.\;/usr/x86_64-w64-mingw32/bin
-else
-prefix += WINEPATH=.
-endif
-else
-ifeq (${static_test},false)
-prefix += WINEPATH=/usr/x86_64-w64-mingw32/bin
-endif
-endif
-else ifeq (${windows},false)
-ifeq (${static_lib},false)
-LIB = libinf.so
-prefix += LD_LIBRARY_PATH=.
-endif
-else
-$(error windows must be true or false)
+	$(error type must be static, shared or header_only)
 endif
 
 TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_OBJ = ${TEST_SRC:.cpp=.o}
 TEST_EXEC = ${TEST_OBJ:.o=.out}
 
-all: ${LIB} ${TEST_EXEC} ${TEST_OBJ}
+all: ${LIB}
 
 # special targets
 .PHONY: all phony_explicit run_tests clean
@@ -90,8 +78,8 @@ phony_explicit:
 src/%.o: src/%.cpp
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-tests/%.out: tests/%.o ${LIB}
-	${CXX} -o $@ $< ${TEST_LDFLAGS}
+tests/%.out: tests/%.cpp ${LIB}
+	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
 
 tests/%.o: tests/%.cpp
 	${CXX} ${TEST_CXXFLAGS} -o $@ -c $<

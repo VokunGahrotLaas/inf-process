@@ -1,3 +1,4 @@
+#define INF_STATIC_STDIO_STREAM
 #include <inf/stdio_stream.hpp>
 
 namespace inf

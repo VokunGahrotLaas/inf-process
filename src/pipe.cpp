@@ -1,3 +1,4 @@
+#define INF_STATIC_PIPE
 #include <inf/pipe.hpp>
 
 namespace inf

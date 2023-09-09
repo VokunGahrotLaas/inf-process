@@ -2,6 +2,7 @@
 
 #include <cerrno>
 #include <iostream>
+#include <utility>
 // inf
 #include <inf/exceptions.hpp>
 #include <inf/stdiobuf.hpp>
@@ -127,7 +128,7 @@ public:
 
 	basic_stdio_stream(basic_stdio_stream&& other)
 		: super_type(std::move(other))
-		, buf_(std::move(other.buf_))
+		, buf_(std::exchange(other.buf_, buf_type(nullptr)))
 	{
 		super_type::rdbuf(&buf_);
 	}
@@ -139,7 +140,7 @@ public:
 	basic_stdio_stream& operator=(basic_stdio_stream&& other)
 	{
 		if (buf_.file() != nullptr) std::fclose(buf_.file());
-		buf_ = std::move(other.buf_);
+		buf_ = std::exchange(other.buf_, buf_type(nullptr));
 		super_type::operator=(std::move(other));
 		super_type::rdbuf(&buf_);
 		return *this;
@@ -189,6 +190,27 @@ public:
 		if (res < 0) throw inf::errno_error("dup2", new_errno);
 	}
 
+	basic_stdio_stream safe_dup(std::ios_base::openmode mode = DefaultMode)
+	{
+		basic_stdio_stream dupped = dup(mode);
+		close();
+		return dupped;
+	}
+
+	basic_stdio_stream safe_dup(basic_stdio_stream& other, std::ios_base::openmode mode = DefaultMode)
+	{
+		basic_stdio_stream backup = other.dup(mode);
+		dup(other);
+		close();
+		return backup;
+	}
+
+	void dup_back(basic_stdio_stream& other)
+	{
+		dup(other);
+		close();
+	}
+
 private:
 	std::FILE* private_file() const { return buf_.private_file(); }
 
@@ -216,7 +238,7 @@ using wstdio_istream = basic_stdio_istream<wchar_t>;
 using stdio_ostream = basic_stdio_ostream<char>;
 using wstdio_ostream = basic_stdio_ostream<wchar_t>;
 
-#ifdef INF_EXTERN_TEMPLATE
+#if !defined(INF_HEADER_ONLY) && !defined(INF_STATIC_STDIO_STREAM)
 extern template class basic_stdio_stream<char, std::char_traits<char>, std::basic_iostream,
 										 std::ios_base::in | std::ios_base::out>;
 extern template class basic_stdio_stream<wchar_t, std::char_traits<wchar_t>, std::basic_iostream,
@@ -227,6 +249,24 @@ extern template class basic_stdio_stream<wchar_t, std::char_traits<wchar_t>, std
 
 extern template class basic_stdio_stream<char, std::char_traits<char>, std::basic_ostream, std::ios_base::out>;
 extern template class basic_stdio_stream<wchar_t, std::char_traits<wchar_t>, std::basic_ostream, std::ios_base::out>;
+
+extern stdio_ostream cout;
+extern wstdio_ostream wcout;
+
+extern stdio_ostream cerr;
+extern wstdio_ostream wcerr;
+
+extern stdio_istream cin;
+extern wstdio_istream wcin;
+#else
+stdio_ostream cout{ stdout };
+wstdio_ostream wcout{ stdout };
+
+stdio_ostream cerr{ stderr };
+wstdio_ostream wcerr{ stderr };
+
+stdio_istream cin{ stdin };
+wstdio_istream wcin{ stdin };
 #endif
 
 } // namespace inf
