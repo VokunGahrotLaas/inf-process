@@ -11,10 +11,11 @@ int main()
 
 	inf::cout << "Hello World!" << std::endl;
 
+	cout_bck.dup_back(inf::cout);
+
 	std::string line;
 	std::getline(pipe.read, line);
 
-	cout_bck.dup_back(inf::cout);
 	inf::cout << "pipe: " << line << std::endl;
 
 	return 0;

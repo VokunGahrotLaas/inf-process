@@ -30,7 +30,7 @@ int main()
 
 	pipe.write.close();
 
-	if (::waitpid(pid, NULL, 0) < 0)
+	if (::waitpid(pid, nullptr, 0) < 0)
 	{
 		std::cerr << "could not waitpid" << std::endl;
 		return 1;
