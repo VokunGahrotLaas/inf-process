@@ -23,15 +23,18 @@ ENV_PREFIX =
 CXX ?= g++
 CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include
 LDFLAGS =
+ARFLAGS = rcs
+
 LIB_CXXFLAGS = ${CXXFLAGS}
 LIB_LDFLAGS = ${LDFLAGS}
-LIB_ARFLAGS = rcs
-TEST_CXXFLAGS = ${CXXFLAGS}
-TEST_LDFLAGS = ${LDFLAGS}
+LIB_ARFLAGS = ${ARFLAGS}
 
 LIB_SRC = ${wildcard src/*.cpp}
 LIB_OBJ = ${LIB_SRC:.cpp=.o}
 LIB_EXEC = libinf-static.a libinf.so libinf.dll
+
+TEST_CXXFLAGS = ${CXXFLAGS}
+TEST_LDFLAGS = ${LDFLAGS}
 
 TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_OBJ = ${TEST_SRC:.cpp=.o}
