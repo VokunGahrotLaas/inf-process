@@ -40,6 +40,10 @@ TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_OBJ = ${TEST_SRC:.cpp=.o}
 TEST_EXEC = ${TEST_OBJ:.o=.out}
 
+# 31 * '-'
+SEP = -------------------------------
+TEST_FAILURE_FILE = ./.test-failure
+
 ifeq (${mode},debug)
 	CXXFLAGS += -ggdb3
 	LDFLAGS += -ggdb3
@@ -112,7 +116,7 @@ endif
 all: lib
 
 # special targets
-.PHONY: all phony_explicit lib tests check clean
+.PHONY: all phony_explicit lib tests pre_check check clean
 .WAIT:
 .SECONDARY:
 phony_explicit:
@@ -140,9 +144,15 @@ lib: ${LIB}
 tests: ${TEST_EXEC}
 
 check_%: tests/test-%.out phony_explicit
-	${ENV_PREFIX} ${prefix} ./$<
+	@echo /${SEP} $<
+	@if ${ENV_PREFIX} ${prefix} ./$<; then echo \\${SEP} $< "\e[32mSUCCESS\e[0m"; else echo \\${SEP} $< "\e[31mFAILURE\e[0m"; touch ${TEST_FAILURE_FILE}; fi
+	@echo
 
-check: tests .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
+pre_check:
+	${RM} ${TEST_FAILURE_FILE}
+
+check: pre_check tests .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
+	@[ -f ${TEST_FAILURE_FILE} ] && (${RM} ${TEST_FAILURE_FILE}; echo "\e[31mCHECK FAILURE\e[0m") || echo "\e[32mCHECK SUCCESS\e[0m"
 
 clean:
 	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_OBJ} ${TEST_EXEC}

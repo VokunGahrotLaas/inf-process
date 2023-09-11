@@ -1,11 +1,11 @@
 #pragma once
 
-#include <cerrno>
+// STL
 #include <iostream>
 #include <utility>
 // inf
-#include <inf/exceptions.hpp>
 #include <inf/stdiobuf.hpp>
+#include <inf/with_errno.hpp>
 
 #ifndef _MSC_VER
 #	define INF_GNU_PURE [[gnu::pure]]
@@ -169,45 +169,47 @@ public:
 
 	void close() { buf_.close(); }
 
-	basic_stdio_stream dup(std::ios_base::openmode mode = DefaultMode) const
+	basic_stdio_stream dup(std::ios_base::openmode mode = DefaultMode,
+						   std::source_location location = std::source_location::current()) const
 	{
-		int old_errno = errno;
-		errno = 0;
-		int new_fd = INF_DUP(private_fd());
-		int new_errno = errno;
-		errno = old_errno;
-		if (new_fd < 0) throw inf::errno_error("dup", new_errno);
+		int new_fd = -1;
+		if (with_errno werr{ "dup" })
+		{
+			new_fd = INF_DUP(private_fd());
+			if (new_fd < 0) werr.throw_error(location);
+		}
 		return basic_stdio_stream::from_fd(new_fd, mode);
 	}
 
-	void dup(basic_stdio_stream& other) const
+	void dup(basic_stdio_stream& other, std::source_location location = std::source_location::current()) const
 	{
-		int old_errno = errno;
-		errno = 0;
-		int res = INF_DUP2(private_fd(), other.fd());
-		int new_errno = errno;
-		errno = old_errno;
-		if (res < 0) throw inf::errno_error("dup2", new_errno);
+		if (with_errno werr{ "dup2" })
+		{
+			int res = INF_DUP2(private_fd(), other.fd());
+			if (res < 0) werr.throw_error(location);
+		}
 	}
 
-	basic_stdio_stream safe_dup(std::ios_base::openmode mode = DefaultMode)
+	basic_stdio_stream safe_dup(std::ios_base::openmode mode = DefaultMode,
+								std::source_location location = std::source_location::current())
 	{
-		basic_stdio_stream dupped = dup(mode);
+		basic_stdio_stream dupped = dup(mode, location);
 		close();
 		return dupped;
 	}
 
-	basic_stdio_stream safe_dup(basic_stdio_stream& other, std::ios_base::openmode mode = DefaultMode)
+	basic_stdio_stream safe_dup(basic_stdio_stream& other, std::ios_base::openmode mode = DefaultMode,
+								std::source_location location = std::source_location::current())
 	{
-		basic_stdio_stream backup = other.dup(mode);
-		dup(other);
+		basic_stdio_stream backup = other.dup(mode, location);
+		dup(other, location);
 		close();
 		return backup;
 	}
 
-	void dup_back(basic_stdio_stream& other)
+	void dup_back(basic_stdio_stream& other, std::source_location location = std::source_location::current())
 	{
-		dup(other);
+		dup(other, location);
 		close();
 	}
 

@@ -1,7 +1,5 @@
 #pragma once
 
-// errno for ::pipe
-#include <cerrno>
 // for ::pipe
 #ifdef _WIN32
 #	include <fcntl.h>
@@ -10,8 +8,8 @@
 #	include <unistd.h>
 #endif
 // inf
-#include <inf/exceptions.hpp>
 #include <inf/stdio_stream.hpp>
+#include <inf/with_errno.hpp>
 
 namespace inf
 {
@@ -65,19 +63,19 @@ public:
 };
 
 template <typename CharT, typename Traits = std::char_traits<CharT>>
-inline basic_pipe<CharT, Traits> make_basic_pipe([[maybe_unused]] unsigned size = 1'024)
+inline basic_pipe<CharT, Traits> make_basic_pipe([[maybe_unused]] unsigned size = 1'024,
+												 std::source_location location = std::source_location::current())
 {
 	int fds[2] = { -1, -1 };
-	int old_errno = errno;
-	errno = 0;
+	if (with_errno werr{ "pipe" })
+	{
 #ifdef _WIN32
-	bool success = ::_pipe(fds, size, _O_BINARY) >= 0;
+		bool success = ::_pipe(fds, size, _O_BINARY) >= 0;
 #else
-	bool success = ::pipe(fds) >= 0;
+		bool success = ::pipe(fds) >= 0;
 #endif
-	int failure_errno = errno;
-	errno = old_errno;
-	if (!success) throw errno_error("pipe", failure_errno);
+		if (!success) werr.throw_error(location);
+	}
 	return basic_pipe<CharT, Traits>(fds[0], fds[1]);
 }
 

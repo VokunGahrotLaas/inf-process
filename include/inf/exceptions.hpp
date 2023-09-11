@@ -1,6 +1,8 @@
 #pragma once
 
+// STL
 #include <exception>
+#include <source_location>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -11,13 +13,15 @@ namespace inf
 class errno_error : public std::exception
 {
 public:
-	errno_error(std::string_view func, int errno_nb) noexcept
+	errno_error(std::string_view func, int errno_nb,
+				std::source_location location = std::source_location::current()) noexcept
 		: what_{}
 		, func_{ func }
 		, errno_nb_(errno_nb)
 	{
 		std::stringstream ss;
-		ss << func_ << "() failed with errno " << errno_nb_;
+		ss << location.file_name() << ':' << location.line() << ':' << location.column() << ':'
+		   << location.function_name() << ": " << func_ << "() failed with errno " << errno_nb_;
 		what_ = std::move(ss).str();
 	}
 
