@@ -43,6 +43,7 @@ TEST_EXEC = ${TEST_OBJ:.o=.out}
 # 31 * '-'
 SEP = -------------------------------
 TEST_FAILURE_FILE = ./.test-failure
+WINEPATH ?= /usr/x86_64-w64-mingw32/bin
 
 ifeq (${mode},debug)
 	CXXFLAGS += -ggdb3
@@ -91,7 +92,7 @@ ifeq (${type},static)
 	TEST_LDFLAGS += -L. -linf-static
 	LIB = ${LIB_STATIC}
 	ifeq (${target},mingw)
-		ENV_PREFIX += WINEPATH=/usr/x86_64-w64-mingw32/bin
+		ENV_PREFIX += WINEPATH=${WINEPATH}
 	endif
 else ifeq (${type},shared)
 	LIB_CXXFLAGS += -fPIC
@@ -99,7 +100,7 @@ else ifeq (${type},shared)
 	TEST_LDFLAGS += -L. -linf
 	LIB = ${LIB_SHARED}
 	ifeq (${target},mingw)
-		ENV_PREFIX += WINEPATH=.\;/usr/x86_64-w64-mingw32/bin
+		ENV_PREFIX += WINEPATH=.\;${WINEPATH}
 	else ifeq (${target},linux)
 		ENV_PREFIX += LD_LIBRARY_PATH=.
 	endif
@@ -107,7 +108,7 @@ else ifeq (${type},header_only)
 	TEST_CXXFLAGS += -DINF_HEADER_ONLY
 	LIB =
 	ifeq (${target},mingw)
-		ENV_PREFIX += WINEPATH=/usr/x86_64-w64-mingw32/bin
+		ENV_PREFIX += WINEPATH=${WINEPATH}
 	endif
 else
 	$(error type must be static, shared or header_only)
@@ -144,7 +145,8 @@ lib: ${LIB}
 tests: ${TEST_EXEC}
 
 check_%: tests/test-%.out phony_explicit
-	@echo /${SEP} $<
+	@echo ${ENV_PREFIX} ${prefix} ./$<
+	@echo /${SEP}
 	@if ${ENV_PREFIX} ${prefix} ./$<; then echo \\${SEP} $< "\e[32mSUCCESS\e[0m"; else echo \\${SEP} $< "\e[31mFAILURE\e[0m"; touch ${TEST_FAILURE_FILE}; fi
 	@echo
 

@@ -20,7 +20,7 @@ public:
 		PARENT
 	};
 
-	fork(std::source_location location = std::source_location::current())
+	fork(inf::source_location location = inf::source_location::current())
 		: pid_{ -1 }
 	{
 		if (with_errno werr{ "fork" })
@@ -40,7 +40,7 @@ public:
 
 	pid_t pid() const { return pid_; }
 
-	int wait(std::source_location location = std::source_location::current())
+	int wait(inf::source_location location = inf::source_location::current())
 	{
 		if (pid_ <= 0) return -1;
 		int status = -1;

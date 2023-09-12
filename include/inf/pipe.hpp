@@ -64,7 +64,7 @@ public:
 
 template <typename CharT, typename Traits = std::char_traits<CharT>>
 inline basic_pipe<CharT, Traits> make_basic_pipe([[maybe_unused]] unsigned size = 1'024,
-												 std::source_location location = std::source_location::current())
+												 inf::source_location location = inf::source_location::current())
 {
 	int fds[2] = { -1, -1 };
 	if (with_errno werr{ "pipe" })

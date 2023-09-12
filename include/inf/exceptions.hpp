@@ -2,10 +2,11 @@
 
 // STL
 #include <exception>
-#include <source_location>
 #include <sstream>
 #include <string>
 #include <string_view>
+// inf
+#include <inf/source_location.hpp>
 
 namespace inf
 {
@@ -14,7 +15,7 @@ class errno_error : public std::exception
 {
 public:
 	errno_error(std::string_view func, int errno_nb,
-				std::source_location location = std::source_location::current()) noexcept
+				inf::source_location location = inf::source_location::current()) noexcept
 		: what_{}
 		, func_{ func }
 		, errno_nb_(errno_nb)

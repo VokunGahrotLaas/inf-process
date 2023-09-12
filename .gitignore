@@ -3,6 +3,7 @@
 compile_flags.txt
 .gdb_history
 *.out
+.test-failure
 
 ## Windows: https://github.com/github/gitignore/blob/master/Global/Windows.gitignore
 

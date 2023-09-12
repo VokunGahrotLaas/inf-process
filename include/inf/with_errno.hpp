@@ -2,7 +2,6 @@
 
 // STL
 #include <cerrno>
-#include <source_location>
 #include <string>
 // inf
 #include <inf/exceptions.hpp>
@@ -23,7 +22,7 @@ public:
 
 	~with_errno() { errno = old_errno_; }
 
-	void throw_error(std::source_location location = std::source_location::current())
+	void throw_error(inf::source_location location = inf::source_location::current())
 	{
 		throw errno_error(func_, errno, location);
 	}
