@@ -13,19 +13,15 @@ using source_location = std::source_location;
 
 #	include <cstdint>
 
-#	ifdef __GNUC__
-#		define INF_FUNCTION __PRETTY_FUNCTION__
-#	else
-#		define INF_FUNCTION __func__
-#	endif
-
 namespace inf
 {
 
+// https://github.com/gcc-mirror/gcc/blob/1f973c295b699011acd7d5fcb04bd2bf887da16d/libstdc%2B%2B-v3/include/experimental/source_location
 struct source_location
 {
-	static constexpr source_location current(char const* file = __FILE__, char const* func = INF_FUNCTION,
-											 int line = __LINE__, int col = 0) noexcept
+	static constexpr source_location current(char const* file = __builtin_FILE(),
+											 char const* func = __builtin_FUNCTION(), int line = __builtin_LINE(),
+											 int col = 0) noexcept
 	{
 		source_location loc;
 		loc.file_ = file;
