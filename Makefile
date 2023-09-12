@@ -31,7 +31,7 @@ LIB_ARFLAGS = ${ARFLAGS}
 
 LIB_SRC = ${wildcard src/*.cpp}
 LIB_OBJ = ${LIB_SRC:.cpp=.o}
-LIB_EXEC = libinf-static.a libinf.so libinf.dll
+LIB_EXEC = libinf-process-static.a libinf-process.so libinf-process.dll
 
 TEST_CXXFLAGS = ${CXXFLAGS}
 TEST_LDFLAGS = ${LDFLAGS}
@@ -79,17 +79,17 @@ else ifneq (${asan},false)
 endif
 
 ifeq (${target},mingw)
-LIB_STATIC = libinf-static.a
-LIB_SHARED = libinf.dll
+LIB_STATIC = libinf-process-static.a
+LIB_SHARED = libinf-process.dll
 else ifeq (${target},linux)
-LIB_STATIC = libinf-static.a
-LIB_SHARED = libinf.so
+LIB_STATIC = libinf-process-static.a
+LIB_SHARED = libinf-process.so
 else
 	$(error target must be mingw or linux)
 endif
 
 ifeq (${type},static)
-	TEST_LDFLAGS += -L. -linf-static
+	TEST_LDFLAGS += -L. -linf-process-static
 	LIB = ${LIB_STATIC}
 	ifeq (${target},mingw)
 		ENV_PREFIX += WINEPATH=${WINEPATH}
@@ -97,7 +97,7 @@ ifeq (${type},static)
 else ifeq (${type},shared)
 	LIB_CXXFLAGS += -fPIC
 	LIB_LDFLAGS += -shared
-	TEST_LDFLAGS += -L. -linf
+	TEST_LDFLAGS += -L. -linf-process
 	LIB = ${LIB_SHARED}
 	ifeq (${target},mingw)
 		ENV_PREFIX += WINEPATH=.\;${WINEPATH}
@@ -147,14 +147,14 @@ tests: ${TEST_EXEC}
 check_%: tests/test-%.out phony_explicit
 	@echo ${ENV_PREFIX} ${prefix} ./$<
 	@echo /${SEP}
-	@if ${ENV_PREFIX} ${prefix} ./$<; then echo \\${SEP} $< "\e[32mSUCCESS\e[0m"; else echo \\${SEP} $< "\e[31mFAILURE\e[0m"; touch ${TEST_FAILURE_FILE}; fi
+	@if ${ENV_PREFIX} ${prefix} ./$<; then echo -e \\${SEP} $< "\e[32mSUCCESS\e[0m"; else echo -e \\${SEP} $< "\e[31mFAILURE\e[0m"; touch ${TEST_FAILURE_FILE}; fi
 	@echo
 
 pre_check:
 	${RM} ${TEST_FAILURE_FILE}
 
 check: pre_check tests .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
-	@[ -f ${TEST_FAILURE_FILE} ] && (${RM} ${TEST_FAILURE_FILE}; echo "\e[31mCHECK FAILURE\e[0m") || echo "\e[32mCHECK SUCCESS\e[0m"
+	@[ -f ${TEST_FAILURE_FILE} ] && (${RM} ${TEST_FAILURE_FILE}; echo -e "\e[31mCHECK FAILURE\e[0m") || echo -e "\e[32mCHECK SUCCESS\e[0m"
 
 clean:
 	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_OBJ} ${TEST_EXEC}
