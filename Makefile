@@ -17,8 +17,8 @@ lto = false
 arch =
 # ... is prefixed to run commands
 prefix =
-
-ENV_PREFIX =
+# path to dlls for wine
+WINEPATH ?= /usr/x86_64-w64-mingw32/bin
 
 CXX ?= g++
 CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include
@@ -40,10 +40,11 @@ TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_OBJ = ${TEST_SRC:.cpp=.o}
 TEST_EXEC = ${TEST_OBJ:.o=.out}
 
-# 31 * '-'
 SEP = -------------------------------
 TEST_FAILURE_FILE = ./.test-failure
-WINEPATH ?= /usr/x86_64-w64-mingw32/bin
+ENV_PREFIX =
+PRINTF_RED = printf "\e[31m%s\e[0m\n"
+PRINTF_GREEN = printf "\e[32m%s\e[0m\n"
 
 ifeq (${mode},debug)
 	CXXFLAGS += -ggdb3
@@ -147,14 +148,14 @@ tests: ${TEST_EXEC}
 check_%: tests/test-%.out phony_explicit
 	@echo ${ENV_PREFIX} ${prefix} ./$<
 	@echo /${SEP}
-	@if ${ENV_PREFIX} ${prefix} ./$<; then echo -e \\${SEP} $< "\e[32mSUCCESS\e[0m"; else echo -e \\${SEP} $< "\e[31mFAILURE\e[0m"; touch ${TEST_FAILURE_FILE}; fi
+	@if ${ENV_PREFIX} ${prefix} ./$<; then printf "%s %s " \\${SEP} "$<"; ${PRINTF_GREEN} "SUCCESS"; else printf "%s %s " \\${SEP} "$<"; ${PRINTF_RED} "FAILURE"; touch ${TEST_FAILURE_FILE}; fi
 	@echo
 
 pre_check:
 	${RM} ${TEST_FAILURE_FILE}
 
 check: pre_check tests .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
-	@[ -f ${TEST_FAILURE_FILE} ] && (${RM} ${TEST_FAILURE_FILE}; echo -e "\e[31mCHECK FAILURE\e[0m") || echo -e "\e[32mCHECK SUCCESS\e[0m"
+	@[ -f ${TEST_FAILURE_FILE} ] && (${RM} ${TEST_FAILURE_FILE}; ${PRINTF_RED} "CHECK FAILURE") || ${PRINTF_GREEN} "CHECK SUCCESS"
 
 clean:
 	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_OBJ} ${TEST_EXEC}
