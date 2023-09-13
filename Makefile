@@ -146,16 +146,25 @@ lib: ${LIB}
 tests: ${TEST_EXEC}
 
 check_%: tests/test-%.out phony_explicit
-	@echo ${ENV_PREFIX} ${prefix} ./$<
-	@echo /${SEP}
-	@if ${ENV_PREFIX} ${prefix} ./$<; then printf "%s %s " \\${SEP} "$<"; ${PRINTF_GREEN} "SUCCESS"; else printf "%s %s " \\${SEP} "$<"; ${PRINTF_RED} "FAILURE"; touch ${TEST_FAILURE_FILE}; fi
-	@echo
+	@echo ${ENV_PREFIX} ${prefix} ./$<; \
+	echo /${SEP}; \
+	if ${ENV_PREFIX} ${prefix} ./$<; then \
+		printf "%s %s " \\${SEP} "$<"; \
+		${PRINTF_GREEN} "SUCCESS"; \
+	else \
+		printf "%s %s " \\${SEP} "$<"; \
+		${PRINTF_RED} "FAILURE"; \
+		touch ${TEST_FAILURE_FILE}; \
+		fi; \
+	echo
 
 pre_check:
 	${RM} ${TEST_FAILURE_FILE}
 
-check: pre_check tests .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
-	@[ -f ${TEST_FAILURE_FILE} ] && (${RM} ${TEST_FAILURE_FILE}; ${PRINTF_RED} "CHECK FAILURE") || ${PRINTF_GREEN} "CHECK SUCCESS"
+check: pre_check ${TEST_EXEC} .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
+	@[ -f ${TEST_FAILURE_FILE} ] \
+		&& (${RM} ${TEST_FAILURE_FILE}; ${PRINTF_RED} "CHECK FAILURE") \
+		|| ${PRINTF_GREEN} "CHECK SUCCESS"
 
 clean:
 	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_OBJ} ${TEST_EXEC}
