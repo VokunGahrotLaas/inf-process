@@ -1,5 +1,5 @@
 // STL
-#include <iostream>
+#include <string>
 // inf
 #include <inf/pipe.hpp>
 
@@ -12,7 +12,7 @@ int main()
 	std::string line;
 	std::getline(pipe.read, line);
 
-	std::cout << "pipe: " << line << std::endl;
+	inf::cout << "pipe: " << line << std::endl;
 
 	return 0;
 }

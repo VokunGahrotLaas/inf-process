@@ -1,5 +1,5 @@
 // STL
-#include <iostream>
+#include <string>
 // inf
 #include <inf/pipe.hpp>
 

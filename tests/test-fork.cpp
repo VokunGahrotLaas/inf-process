@@ -1,7 +1,6 @@
 #ifndef _WIN32
 
 // STL
-#	include <iostream>
 #	include <string>
 // inf
 #	include <inf/pipe.hpp>
@@ -27,7 +26,7 @@ int main()
 	std::string line;
 	std::getline(pipe.read, line);
 
-	std::cout << "pipe: " << line << std::endl;
+	inf::cout << "pipe: " << line << std::endl;
 
 	return 0;
 }
@@ -38,7 +37,7 @@ int main()
 
 int main()
 {
-	std::cerr << "cannot fork so this test has no counterpart on windows" << std::endl;
+	inf::cerr << "cannot fork so this test has no counterpart on windows" << std::endl;
 	return 0;
 }
 
