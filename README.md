@@ -2,7 +2,7 @@
 
 C++ wrapper for C io / POSIX / Windows functions.
 
-Currently supports:
+## Features
 
 * Wrapping a FILE* in a inf::stdio_stream.
 
