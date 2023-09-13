@@ -3,9 +3,9 @@
 std = c++20
 # 0|1|2|3|fast|s|z
 O = 2
-# linux|mingw
+# linux|mingw|windows
 target = linux
-# static|shared|header_only
+# static|shared|header_only|static_shared
 type = shared
 # debug|release
 mode = release
@@ -17,8 +17,16 @@ lto = false
 arch =
 # ... is prefixed to run commands
 prefix =
-# path to dlls for wine
+# build directory
+dir = build
+
+SHELL = /bin/sh
+# path to .dll for wine
 WINEPATH ?= /usr/x86_64-w64-mingw32/bin
+# path to .so for linux
+LD_LIBRARY_PATH ?=
+# path to .dll for windows
+PATH ?=
 
 CXX ?= g++
 CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include
@@ -30,21 +38,21 @@ LIB_LDFLAGS = ${LDFLAGS}
 LIB_ARFLAGS = ${ARFLAGS}
 
 LIB_SRC = ${wildcard src/*.cpp}
-LIB_OBJ = ${LIB_SRC:.cpp=.o}
-LIB_EXEC = libinf-process-static.a libinf-process.so libinf-process.dll
+LIB_OBJ = ${addprefix ${dir}/,${LIB_SRC:.cpp=.o}}
+LIB_EXEC = ${dir}/libinf-process-static.a ${dir}/libinf-process.so ${dir}/libinf-process.dll
 
 TEST_CXXFLAGS = ${CXXFLAGS}
 TEST_LDFLAGS = ${LDFLAGS}
 
 TEST_SRC = ${wildcard tests/test-*.cpp}
-TEST_OBJ = ${TEST_SRC:.cpp=.o}
-TEST_EXEC = ${TEST_OBJ:.o=.out}
+TEST_EXEC = ${addprefix ${dir}/,${TEST_SRC:.cpp=.out}}
 
 SEP = -------------------------------
 TEST_FAILURE_FILE = ./.test-failure
-ENV_PREFIX =
 PRINTF_RED = printf "\e[31m%s\e[0m\n"
 PRINTF_GREEN = printf "\e[32m%s\e[0m\n"
+RMDIR = rmdir --ignore-fail-on-non-empty
+MKDIR = mkdir -p
 
 ifeq (${mode},debug)
 	CXXFLAGS += -ggdb3
@@ -80,40 +88,50 @@ else ifneq (${asan},false)
 endif
 
 ifeq (${target},mingw)
-LIB_STATIC = libinf-process-static.a
-LIB_SHARED = libinf-process.dll
+LIB_STATIC = ${dir}/libinf-process-static.a
+LIB_SHARED = ${dir}/libinf-process.dll
 else ifeq (${target},linux)
-LIB_STATIC = libinf-process-static.a
-LIB_SHARED = libinf-process.so
+LIB_STATIC = ${dir}/libinf-process-static.a
+LIB_SHARED = ${dir}/libinf-process.so
 else
 	$(error target must be mingw or linux)
 endif
 
 ifeq (${type},static)
-	TEST_LDFLAGS += -L. -linf-process-static
+	TEST_LDFLAGS += -L${dir} -linf-process-static
 	LIB = ${LIB_STATIC}
-	ifeq (${target},mingw)
-		ENV_PREFIX += WINEPATH=${WINEPATH}
-	endif
 else ifeq (${type},shared)
 	LIB_CXXFLAGS += -fPIC
 	LIB_LDFLAGS += -shared
-	TEST_LDFLAGS += -L. -linf-process
+	TEST_LDFLAGS += -L${dir} -linf-process
 	LIB = ${LIB_SHARED}
-	ifeq (${target},mingw)
-		ENV_PREFIX += WINEPATH=.\;${WINEPATH}
+	ifeq (${target},windows)
+		PATH := ${PATH}\;${dir}
+	else ifeq (${target},mingw)
+		WINEPATH := ${WINEPATH}\;${dir}
 	else ifeq (${target},linux)
-		ENV_PREFIX += LD_LIBRARY_PATH=.
+		LD_LIBRARY_PATH := ${LD_LIBRARY_PATH}:${dir}
+	endif
+else ifeq (${type},static_shared)
+	LIB_CXXFLAGS += -fPIC
+	LIB_LDFLAGS += -shared
+	TEST_LDFLAGS += -L${dir} -linf-process
+	LIB = ${LIB_SHARED} ${LIB_STATIC}
+	ifeq (${target},windows)
+		PATH := ${PATH}\;${dir}
+	else ifeq (${target},mingw)
+		WINEPATH := ${WINEPATH}\;${dir}
+	else ifeq (${target},linux)
+		LD_LIBRARY_PATH := ${LD_LIBRARY_PATH}:${dir}
 	endif
 else ifeq (${type},header_only)
 	TEST_CXXFLAGS += -DINF_HEADER_ONLY
 	LIB =
-	ifeq (${target},mingw)
-		ENV_PREFIX += WINEPATH=${WINEPATH}
-	endif
 else
-	$(error type must be static, shared or header_only)
+	$(error type must be static, shared, header_only or static_shared)
 endif
+
+export WINEPATH LD_LIBRARY_PATH PATH
 
 all: lib
 
@@ -123,30 +141,38 @@ all: lib
 .SECONDARY:
 phony_explicit:
 
-%.a: ${TLIB_OBJ}
+${dir}:
+	${MKDIR} "${dir}"
+
+${dir}/src: | ${dir}
+	${MKDIR} "${dir}/src"
+
+${dir}/tests: | ${dir}
+	${MKDIR} "${dir}/tests"
+
+${LIB_STATIC}: ${LIB_OBJ}
 	${AR} ${LIB_ARFLAGS} $@ $^
 
-%.so: ${LIB_OBJ}
+ifeq (${type},static_shared)
+${LIB_SHARED}: ${LIB_STATIC}
+	${CXX} -o $@ -Wl,--whole-archive $< -Wl,--no-whole-archive ${LIB_LDFLAGS}
+else
+${LIB_SHARED}: ${LIB_OBJ}
 	${CXX} -o $@ $^ ${LIB_LDFLAGS}
+endif
 
-%.dll: ${LIB_OBJ}
-	${CXX} -o $@ $^ ${LIB_LDFLAGS}
-
-src/%.o: src/%.cpp
+${dir}/src/%.o: src/%.cpp | ${dir}/src
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-tests/%.out: tests/%.cpp ${LIB}
+${dir}/tests/%.out: tests/%.cpp ${LIB} | ${dir}/tests
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
-
-tests/%.o: tests/%.cpp
-	${CXX} ${TEST_CXXFLAGS} -o $@ -c $<
 
 lib: ${LIB}
 
 tests: ${TEST_EXEC}
 
-check_%: tests/test-%.out phony_explicit
-	@echo ${ENV_PREFIX} ${prefix} ./$<; \
+check_%: ${dir}/tests/test-%.out phony_explicit
+	@echo ${prefix} ./$<; \
 	echo /${SEP}; \
 	if ${ENV_PREFIX} ${prefix} ./$<; then \
 		printf "%s %s " \\${SEP} "$<"; \
@@ -167,4 +193,15 @@ check: pre_check ${TEST_EXEC} .WAIT ${addprefix check_,${subst tests/test-,,${ba
 		|| ${PRINTF_GREEN} "CHECK SUCCESS"
 
 clean:
-	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_OBJ} ${TEST_EXEC}
+	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC}
+ifneq (${realpath ${dir}},${realpath .})
+ifneq (${wildcard ${dir}/src},)
+	${RMDIR} ${dir}/src
+endif
+ifneq (${wildcard ${dir}/tests},)
+	${RMDIR} ${dir}/tests
+endif
+ifneq (${wildcard ${dir}},)
+	${RMDIR} -p ${dir}
+endif
+endif

@@ -33,7 +33,7 @@ int main()
 
 #else
 
-#	include <iostream>
+#	include <inf/stdio_stream.hpp>
 
 int main()
 {
