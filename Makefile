@@ -87,12 +87,15 @@ else ifneq (${asan},false)
 	$(error asan must be true or false)
 endif
 
-ifeq (${target},mingw)
-LIB_STATIC = ${dir}/libinf-process-static.a
-LIB_SHARED = ${dir}/libinf-process.dll
+ifeq (${target},windows)
+	LIB_STATIC = ${dir}/libinf-process-static.a
+	LIB_SHARED = ${dir}/libinf-process.dll
+else ifeq (${target},mingw)
+	LIB_STATIC = ${dir}/libinf-process-static.a
+	LIB_SHARED = ${dir}/libinf-process.dll
 else ifeq (${target},linux)
-LIB_STATIC = ${dir}/libinf-process-static.a
-LIB_SHARED = ${dir}/libinf-process.so
+	LIB_STATIC = ${dir}/libinf-process-static.a
+	LIB_SHARED = ${dir}/libinf-process.so
 else
 	$(error target must be mingw or linux)
 endif
