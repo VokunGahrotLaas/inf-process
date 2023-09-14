@@ -37,7 +37,7 @@ int main()
 
 int main()
 {
-	inf::cerr << "cannot fork so this test has no counterpart on windows" << std::endl;
+	inf::cout << "cannot fork so this test has no counterpart on windows" << std::endl;
 	return 0;
 }
 
