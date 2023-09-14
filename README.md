@@ -1,5 +1,7 @@
 # inf-process
 
+[![inf-process make check](https://github.com/VokunGahrotLaas/inf-process/actions/workflows/check.yml/badge.svg?branch=master)](https://github.com/VokunGahrotLaas/inf-process/actions/workflows/check.yml?query=branch%3Amaster)
+
 C++ wrapper for C io / POSIX / Windows functions.
 
 ## Features

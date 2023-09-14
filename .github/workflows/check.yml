@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Make Check
 
 on:
   push:
@@ -11,27 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: make tests debug
       run: make dir=build-debug mode=debug tests -j
     - name: make check debug
       run: make dir=build-debug mode=debug check -j -O
-    
+
     - name: make tests release
       run: make dir=build-release mode=release tests -j
     - name: make check release
       run: make dir=build-release mode=release check -j -O
-      
+
   check-windows:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: make tests debug
       run: make dir=build-debug mode=debug target=windows tests -j
     - name: make check debug
       run: make dir=build-debug mode=debug target=windows check -j -O
-    
+
     - name: make tests release
       run: make dir=build-release mode=release target=windows tests -j
     - name: make check release
