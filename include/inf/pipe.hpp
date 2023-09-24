@@ -8,8 +8,8 @@
 #	include <unistd.h>
 #endif
 // inf
+#include <inf/errno_guard.hpp>
 #include <inf/stdio_stream.hpp>
-#include <inf/with_errno.hpp>
 
 namespace inf
 {
@@ -67,15 +67,13 @@ inline basic_pipe<CharT, Traits> make_basic_pipe([[maybe_unused]] unsigned size 
 												 inf::source_location location = inf::source_location::current())
 {
 	int fds[2] = { -1, -1 };
-	if (with_errno werr{ "pipe" })
-	{
+	errno_guard errg{ "pipe" };
 #ifdef _WIN32
-		bool success = ::_pipe(fds, size, _O_BINARY) >= 0;
+	bool success = ::_pipe(fds, size, _O_BINARY) >= 0;
 #else
-		bool success = ::pipe(fds) >= 0;
+	bool success = ::pipe(fds) >= 0;
 #endif
-		if (!success) werr.throw_error(location);
-	}
+	if (!success) errg.throw_error(location);
 	return basic_pipe<CharT, Traits>(fds[0], fds[1]);
 }
 

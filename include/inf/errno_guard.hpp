@@ -5,22 +5,21 @@
 #include <string>
 // inf
 #include <inf/exceptions.hpp>
-#include <inf/with.hpp>
 
 namespace inf
 {
 
-class with_errno : public with
+class errno_guard
 {
 public:
-	with_errno(std::string func)
+	errno_guard(std::string func)
 		: old_errno_(errno)
 		, func_(func)
 	{
 		errno = 0;
 	}
 
-	~with_errno() { errno = old_errno_; }
+	~errno_guard() { errno = old_errno_; }
 
 	void throw_error(inf::source_location location = inf::source_location::current())
 	{

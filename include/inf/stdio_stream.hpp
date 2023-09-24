@@ -4,8 +4,8 @@
 #include <iostream>
 #include <utility>
 // inf
+#include <inf/errno_guard.hpp>
 #include <inf/stdiobuf.hpp>
-#include <inf/with_errno.hpp>
 
 #ifndef _MSC_VER
 #	define INF_GNU_PURE [[gnu::pure]]
@@ -173,21 +173,17 @@ public:
 						   inf::source_location location = inf::source_location::current()) const
 	{
 		int new_fd = -1;
-		if (with_errno werr{ "dup" })
-		{
-			new_fd = INF_DUP(private_fd());
-			if (new_fd < 0) werr.throw_error(location);
-		}
+		errno_guard errg{ "dup" };
+		new_fd = INF_DUP(private_fd());
+		if (new_fd < 0) errg.throw_error(location);
 		return basic_stdio_stream::from_fd(new_fd, mode);
 	}
 
 	void dup(basic_stdio_stream& other, inf::source_location location = inf::source_location::current()) const
 	{
-		if (with_errno werr{ "dup2" })
-		{
-			int res = INF_DUP2(private_fd(), other.fd());
-			if (res < 0) werr.throw_error(location);
-		}
+		errno_guard errg{ "dup2" };
+		int res = INF_DUP2(private_fd(), other.fd());
+		if (res < 0) errg.throw_error(location);
 	}
 
 	basic_stdio_stream safe_dup(std::ios_base::openmode mode = DefaultMode,

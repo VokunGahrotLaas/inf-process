@@ -14,14 +14,16 @@ C++ wrapper for C io / POSIX / Windows functions.
 
 * Wrapping a pipe() in a inf::pipe.
 
-* Wrapping posix_spawn/waitpid on Unix \
+* Wrapping posix_spawn/waitpid/waitid on Unix \
     & _spawnvpe/_cwait on Windows with inf::spawn.
 
-* Wrapping fork/waitpid on Unix with inf::fork.
+* Wrapping fork/waitpid/waitid on Unix with inf::fork.
 
-* Errno wrapper for all function that set errno with inf::with_errno, \
+* Errno wrapper for all function that set errno with inf::errno_guard, \
     throws inf::errno_error with a source_location, \
     the function name that set errno & the errno value.
+
+* Wrapping mmap on Unix with inf::mmap.
 
 ## TODOs
 

@@ -2,7 +2,7 @@
 
 // STL
 #include <string>
-//
+// Unix / Windows
 #ifndef _WIN32
 #	include <spawn.h>
 #	include <sys/wait.h>
@@ -10,7 +10,7 @@
 #	include <process.h>
 #endif
 // inf
-#include <inf/with_errno.hpp>
+#include <inf/errno_guard.hpp>
 
 #ifndef _WIN32
 extern char** environ;
@@ -32,11 +32,13 @@ public:
 	{
 #ifndef _WIN32
 		if (envp == nullptr) envp = ::environ;
-		if (with_errno werr{ "posix_spawnp" }; ::posix_spawnp(&pid_, path, nullptr, nullptr, argv, envp) != 0)
-			werr.throw_error(location);
+		errno_guard errg{ "posix_spawnp" };
+		int res = ::posix_spawnp(&pid_, path, nullptr, nullptr, argv, envp);
+		if (res != 0) errg.throw_error(location);
 #else
-		if (with_errno werr{ "posix_spawnp" }; (handle_ = ::_spawnvpe(_P_NOWAIT, path, argv, envp)) == -1)
-			werr.throw_error(location);
+		errno_guard errg{ "posix_spawnp" };
+		handle_ = ::_spawnvpe(_P_NOWAIT, path, argv, envp);
+		if (handle_ == -1) errg.throw_error(location);
 #endif
 	}
 
@@ -51,21 +53,30 @@ public:
 		int status = -1;
 #ifndef _WIN32
 		if (pid_ <= 0) return -1;
-		if (with_errno werr{ "waitpid" })
-		{
-			pid_t res = ::waitpid(pid_, &status, 0);
-			if (res < 0) werr.throw_error(location);
-		}
+		errno_guard errg{ "waitpid" };
+		pid_t res = ::waitpid(pid_, &status, 0);
+		if (res < 0) errg.throw_error(location);
 #else
 		if (handle_ == -1) return -1;
-		if (with_errno werr{ "_cwait" })
-		{
-			pid_t res = ::_cwait(&status, handle_, _WAIT_CHILD);
-			if (res == -1) werr.throw_error(location);
-		}
+		errno_guard errg{ "_cwait" };
+		pid_t res = ::_cwait(&status, handle_, _WAIT_CHILD);
+		if (res == -1) errg.throw_error(location);
 #endif
 		return status;
 	}
+
+#ifndef _WIN32
+	int peek(inf::source_location location = inf::source_location::current())
+	{
+		if (pid_ <= 0) return -1;
+		siginfo_t status;
+		status.si_pid = 0;
+		errno_guard errg{ "waitid" };
+		int res = ::waitid(P_PID, static_cast<id_t>(pid_), &status, WEXITED | WNOHANG | WNOWAIT);
+		if (res < 0) errg.throw_error(location);
+		return status.si_pid > 0;
+	}
+#endif
 
 private:
 #ifndef _WIN32

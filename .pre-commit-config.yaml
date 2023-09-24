@@ -3,6 +3,7 @@ repos:
     rev: v16.0.6
     hooks:
     - id: clang-format
+      args: [--Werror, --dry-run]
       types_or: [c++]
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 3.0.0
