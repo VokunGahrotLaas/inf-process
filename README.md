@@ -23,7 +23,10 @@ C++ wrapper for C io / POSIX / Windows functions.
     throws inf::errno_error with a source_location, \
     the function name that set errno & the errno value.
 
-* Wrapping mmap on Unix with inf::mmap.
+* Wrapping memfd_create/ftruncate on Unix & CreateFileMappingA on Windows with \
+    inf::shared_memory.
+
+* Wrapping mmap on Unix & MapViewOfFile on Windows with inf::memory_map.
 
 ## TODOs
 

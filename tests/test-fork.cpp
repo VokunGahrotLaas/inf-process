@@ -21,7 +21,7 @@ int main()
 
 	pipe.write.close();
 
-	fork.wait();
+	fork.wait_exit();
 
 	std::string line;
 	std::getline(pipe.read, line);

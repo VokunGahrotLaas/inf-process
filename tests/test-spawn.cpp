@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 
 	cout_bck.dup_back(inf::cout);
 
-	spawn.wait();
+	spawn.wait_exit();
 
 	std::string line;
 	std::getline(pipe.read, line);

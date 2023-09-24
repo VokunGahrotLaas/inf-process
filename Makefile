@@ -29,7 +29,7 @@ LD_LIBRARY_PATH ?=
 PATH ?=
 
 CXX ?= g++
-CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include
+CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include -D_GNU_SOURCE
 LDFLAGS =
 ARFLAGS = rcs
 

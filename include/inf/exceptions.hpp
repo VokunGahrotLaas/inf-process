@@ -11,33 +11,75 @@
 namespace inf
 {
 
-class errno_error : public std::exception
+namespace
+{
+
+template <typename... Args>
+std::string string_of_stream(Args&&... args)
+{
+	std::stringstream ss;
+	(ss << ... << std::forward<Args>(args));
+	return std::move(ss).str();
+}
+
+} // namespace
+
+class exception : public std::exception
 {
 public:
-	errno_error(std::string_view func, int errno_nb,
-				inf::source_location location = inf::source_location::current()) noexcept
-		: what_{}
-		, func_{ func }
-		, errno_nb_(errno_nb)
-	{
-		std::stringstream ss;
-		ss << location.file_name() << ':' << location.line() << ':' << location.column() << ':'
-		   << location.function_name() << ": " << func_ << "() failed with errno " << errno_nb_;
-		what_ = std::move(ss).str();
-	}
+	using super_type = std::exception;
 
-	~errno_error() override = default;
+	exception(std::string_view what, inf::source_location location = inf::source_location::current()) noexcept
+		: what_{ string_of_stream(location.file_name(), ':', location.line(), ':', location.column(), ':', what) }
+	{}
+
+	~exception() override = default;
 
 	char const* what() const noexcept override { return what_.c_str(); }
 
-	std::string const& func() { return func_; }
-
-	int errno_nb() { return errno_nb_; }
-
 private:
 	std::string what_;
+};
+
+class errno_exception : public exception
+{
+public:
+	using super_type = exception;
+
+	errno_exception(std::string_view func, int errno_nb,
+					inf::source_location location = inf::source_location::current()) noexcept
+		: super_type{ string_of_stream("inf::errno_exception: ", func_, "() failed with errno ", errno_nb_), location }
+		, func_{ func }
+		, errno_nb_(errno_nb)
+	{}
+
+	~errno_exception() override = default;
+
+	std::string const& func() const noexcept { return func_; }
+
+	int errno_nb() const noexcept { return errno_nb_; }
+
+private:
 	std::string func_;
 	int errno_nb_;
+};
+
+class status_exception : public exception
+{
+public:
+	using super_type = exception;
+
+	status_exception(int status, inf::source_location location = inf::source_location::current()) noexcept
+		: super_type{ string_of_stream("inf::status_exception: "), location }
+		, status_{ status }
+	{}
+
+	~status_exception() override = default;
+
+	int status() const noexcept { return status_; }
+
+private:
+	int status_;
 };
 
 } // namespace inf

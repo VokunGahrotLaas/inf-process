@@ -23,7 +23,7 @@ public:
 
 	void throw_error(inf::source_location location = inf::source_location::current())
 	{
-		throw errno_error(func_, errno, location);
+		throw errno_exception(func_, errno, location);
 	}
 
 private:

@@ -1,6 +1,8 @@
 #pragma once
 
 // STL
+#include <cstdlib>
+#include <functional>
 #include <string>
 // Unix / Windows
 #ifndef _WIN32
@@ -11,6 +13,7 @@
 #endif
 // inf
 #include <inf/errno_guard.hpp>
+#include <inf/exceptions.hpp>
 
 #ifndef _WIN32
 extern char** environ;
@@ -18,6 +21,9 @@ extern char** environ;
 
 namespace inf
 {
+
+template <int expected>
+std::function<bool(int)> status_equals = [](int status) -> bool { return status == expected; };
 
 class spawn
 {
@@ -65,6 +71,17 @@ public:
 		return status;
 	}
 
+	void wait_exit(std::function<bool(int)> pred = inf::status_equals<0>,
+				   inf::source_location location = inf::source_location::current())
+	{
+		int status = wait();
+#ifndef _WIN32
+		if (!WIFEXITED(status)) throw status_exception(status, location);
+		status = WEXITSTATUS(status);
+#endif
+		if (!pred(status)) throw status_exception(status, location);
+	}
+
 #ifndef _WIN32
 	int peek(inf::source_location location = inf::source_location::current())
 	{
@@ -74,7 +91,7 @@ public:
 		errno_guard errg{ "waitid" };
 		int res = ::waitid(P_PID, static_cast<id_t>(pid_), &status, WEXITED | WNOHANG | WNOWAIT);
 		if (res < 0) errg.throw_error(location);
-		return status.si_pid > 0;
+		return status.si_pid;
 	}
 #endif
 

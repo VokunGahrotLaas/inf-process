@@ -2,14 +2,20 @@
 
 #ifndef _WIN32
 
+// STL
+#	include <functional>
 // Unix
 #	include <sys/wait.h>
 #	include <unistd.h>
 // inf
 #	include <inf/errno_guard.hpp>
+#	include <inf/exceptions.hpp>
 
 namespace inf
 {
+
+template <int expected>
+std::function<bool(int)> status_equals = [](int status) -> bool { return status == expected; };
 
 class fork
 {
@@ -48,6 +54,15 @@ public:
 		return status;
 	}
 
+	void wait_exit(std::function<bool(int)> pred = inf::status_equals<0>,
+				   inf::source_location location = inf::source_location::current())
+	{
+		int status = wait();
+		if (!WIFEXITED(status)) throw status_exception(status, location);
+		status = WEXITSTATUS(status);
+		if (!pred(status)) throw status_exception(status, location);
+	}
+
 	bool peek(inf::source_location location = inf::source_location::current())
 	{
 		if (pid_ <= 0) return -1;
@@ -56,7 +71,7 @@ public:
 		errno_guard errg{ "waitid" };
 		int res = ::waitid(P_PID, static_cast<id_t>(pid_), &status, WEXITED | WNOHANG | WNOWAIT);
 		if (res < 0) errg.throw_error(location);
-		return status.si_pid > 0;
+		return status.si_pid;
 	}
 
 private:
