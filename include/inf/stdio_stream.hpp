@@ -3,31 +3,14 @@
 // STL
 #include <iostream>
 #include <utility>
+// Windows
+#ifdef _WIN32
+#	include <windows.h>
+#endif
 // inf
 #include <inf/errno_guard.hpp>
+#include <inf/ioutils.hpp>
 #include <inf/stdiobuf.hpp>
-
-#ifndef _MSC_VER
-#	define INF_GNU_PURE [[gnu::pure]]
-#else
-#	define INF_GNU_PURE
-#endif
-
-#ifndef _WIN32
-#	include <unistd.h>
-#	define INF_FDOPEN ::fdopen
-#	define INF_WFDOPEN ::fdopen
-#	define INF_DUP ::dup
-#	define INF_DUP2 ::dup2
-#else
-#	include <windows.h>
-#	include <io.h>
-#	include <fcntl.h>
-#	define INF_FDOPEN ::_fdopen
-#	define INF_WFDOPEN ::_wfdopen
-#	define INF_DUP ::_dup
-#	define INF_DUP2 ::_dup2
-#endif
 
 namespace inf
 {
@@ -117,10 +100,11 @@ public:
 	}
 
 #ifdef _WIN32
-	static basic_stdio_stream from_handle(HANDLE handle, std::ios_base::openmode mode = DefaultMode)
+	static basic_stdio_stream from_handle(HANDLE handle, std::ios_base::openmode mode = DefaultMode,
+										  inf::source_location location = inf::source_location::current())
 	{
-		return basic_stdio_stream::from_fd(_open_osfhandle(
-			(intptr_t)handle, open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT))));
+		return basic_stdio_stream::from_fd(winhandle_to_fd(
+			handle, open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT)), location));
 	}
 #endif
 
@@ -160,9 +144,12 @@ public:
 	int fd() { return file() != nullptr ? ::fileno(file()) : -1; }
 
 #ifndef _WIN32
-	int native_handle() { return fd(); }
+	int native_handle([[maybe_unused]] inf::source_location location = inf::source_location::current()) { return fd(); }
 #else
-	HANDLE native_handle() { return (HANDLE)_get_osfhandle(fd()); }
+	HANDLE native_handle(inf::source_location location = inf::source_location::current())
+	{
+		return fd_to_winhandle(fd(), location);
+	}
 #endif
 
 	buf_type& buf() { return buf_; }

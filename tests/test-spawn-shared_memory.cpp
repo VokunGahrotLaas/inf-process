@@ -1,12 +1,11 @@
-#ifndef _WIN32
 // STL
-#	include <algorithm>
-#	include <string>
-#	include <string_view>
+#include <algorithm>
+#include <string>
+#include <string_view>
 // inf
-#	include <inf/shared_memory.hpp>
-#	include <inf/spawn.hpp>
-#	include <inf/stdio_stream.hpp>
+#include <inf/shared_memory.hpp>
+#include <inf/spawn.hpp>
+#include <inf/stdio_stream.hpp>
 
 int int_of_str(std::string_view str) { return std::atoi(str.data()); }
 
@@ -50,12 +49,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-#else
-#	include <inf/stdio_stream.hpp>
-
-int main()
-{
-	inf::cout << "Not yet implemented on Windows!" << std::endl;
-	return 0;
-}
-#endif

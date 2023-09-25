@@ -7,10 +7,11 @@
 #ifndef _WIN32
 #	include <sys/mman.h>
 #else
-#	include <Memoryapi.h>
+#	include <memoryapi.h>
 #endif
 // inf
 #include <inf/errno_guard.hpp>
+#include <inf/ioutils.hpp>
 
 namespace inf
 {
@@ -35,9 +36,16 @@ public:
 						inf::source_location location = inf::source_location::current())
 		: super_type{ static_cast<T*>(nullptr), size }
 	{
+#ifndef _WIN32
 		errno_guard errg{ "mmap" };
 		void* ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
 		if (ptr == MAP_FAILED) errg.throw_error(location);
+#else
+		HANDLE handle = fd_to_winhandle(fd, location);
+		errno_guard errg{ "MapViewOfFile" };
+		void* ptr = ::MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, offset, size);
+		if (ptr == nullptr) errg.throw_error(location);
+#endif
 		super_type::operator=(super_type{ reinterpret_cast<T*>(ptr), size });
 		std::uninitialized_default_construct(super_type::begin(), super_type::end());
 	}
@@ -46,9 +54,16 @@ public:
 						inf::source_location location = inf::source_location::current())
 		: super_type{ static_cast<T*>(nullptr), size }
 	{
+#ifndef _WIN32
 		errno_guard errg{ "mmap" };
 		void* ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
 		if (ptr == MAP_FAILED) errg.throw_error(location);
+#else
+		HANDLE handle = fd_to_winhandle(fd, location);
+		errno_guard errg{ "MapViewOfFile" };
+		void* ptr = ::MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, offset, size);
+		if (ptr == nullptr) errg.throw_error(location);
+#endif
 		super_type::operator=(super_type{ reinterpret_cast<T*>(ptr), size });
 		std::uninitialized_fill(super_type::begin(), super_type::end(), data);
 	}
@@ -65,8 +80,13 @@ public:
 	{
 		if (super_type::data() != nullptr)
 		{
+#ifndef _WIN32
 			errno_guard errg{ "munmap" };
 			if (::munmap(super_type::data(), super_type::size()) < 0) errg.throw_error(location);
+#else
+			errno_guard errg{ "UnmapViewOfFile" };
+			if (!::UnmapViewOfFile(super_type::data())) errg.throw_error(location);
+#endif
 		}
 		super_type::operator=(super_type{ static_cast<T*>(nullptr), super_type::size() });
 	}

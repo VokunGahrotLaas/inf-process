@@ -3,17 +3,17 @@
 // STL
 #include <memory>
 #include <span>
-#include <sys/select.h>
 // Unix / Windows
 #ifndef _WIN32
 #	include <sys/mman.h>
 #	include <unistd.h>
 #else
-#	include <Memoryapi.h>
+#	include <memoryapi.h>
 #endif
 // inf
 #include <inf/errno_guard.hpp>
 #include <inf/exceptions.hpp>
+#include <inf/ioutils.hpp>
 #include <inf/memory_map.hpp>
 
 namespace inf
@@ -24,6 +24,7 @@ class shared_memory
 public:
 	explicit shared_memory(std::size_t size, inf::source_location location = inf::source_location::current())
 	{
+#ifndef _WIN32
 		{
 			errno_guard errg{ "memfd_create" };
 			fd_ = ::memfd_create("inf::shared_memory", 0);
@@ -33,8 +34,21 @@ public:
 		{
 			errno_guard errg{ "ftruncate" };
 			if (ftruncate(fd_, static_cast<::off_t>(size)) < 0) errg.throw_error(location);
-			size_ = size;
 		}
+#else
+		HANDLE handle = nullptr;
+		{
+			errno_guard errg{ "CreateFileMappingA" };
+			SECURITY_ATTRIBUTES sec_attr{ sizeof(sec_attr), nullptr, true };
+			uint32_t low = size & 0xffffffffu;
+			uint32_t high = size >> 32;
+			handle =
+				::CreateFileMappingA(INVALID_HANDLE_VALUE, &sec_attr, PAGE_READWRITE | SEC_COMMIT, high, low, nullptr);
+			if (handle == nullptr) errg.throw_error(location);
+		}
+		fd_ = winhandle_to_fd(handle, 0, location);
+#endif
+		size_ = size;
 	}
 
 	~shared_memory() { close(); }
@@ -48,7 +62,7 @@ public:
 		if (fd_ > 0)
 		{
 			errno_guard errg{ "close" };
-			if (::close(fd_) < 0) errg.throw_error(location);
+			if (INF_CLOSE(fd_) < 0) errg.throw_error(location);
 		}
 		fd_ = -1;
 		size_ = 0;
@@ -60,8 +74,9 @@ public:
 	memory_map<T, E> map(std::size_t size = npos, std::size_t offset = 0,
 						 inf::source_location location = inf::source_location::current())
 	{
-		if ((size > size_ ? size_ : size) < sizeof(T)) throw exception("out of bounds", location);
-		return memory_map<T, E>{ fd_, (size > size_ ? size_ : size) / sizeof(T),
+		if (offset >= size_ || size == 0 || (size + offset > size_ ? size_ - offset : size) < sizeof(T))
+			throw exception("out of bounds", location);
+		return memory_map<T, E>{ fd_, (size + offset > size_ ? size_ - offset : size) / sizeof(T),
 								 static_cast<::off_t>(offset * sizeof(T)), location };
 	}
 
