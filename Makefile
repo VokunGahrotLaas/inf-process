@@ -48,7 +48,7 @@ TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_EXEC = ${addprefix ${dir}/,${TEST_SRC:.cpp=.out}}
 
 SEP = -------------------------------
-TEST_FAILURE_FILE = ./.test-failure
+TEST_FAILURE_FILE = ${dir}/.test-failure
 PRINTF_RED = printf "\e[31m%s\e[0m\n"
 PRINTF_GREEN = printf "\e[32m%s\e[0m\n"
 RMDIR = rmdir --ignore-fail-on-non-empty
@@ -191,9 +191,10 @@ pre_check:
 	${RM} ${TEST_FAILURE_FILE}
 
 check: pre_check ${TEST_EXEC} .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
-	@[ -f ${TEST_FAILURE_FILE} ] \
-		|| ${PRINTF_GREEN} "CHECK SUCCESS" \
-		&& (${RM} ${TEST_FAILURE_FILE}; ${PRINTF_RED} "CHECK FAILURE"; exit 1)
+	@[ -f "${TEST_FAILURE_FILE}" ] \
+		&& ${PRINTF_RED} "CHECK FAILURE" \
+		|| ${PRINTF_GREEN} "CHECK SUCCESS"
+	@! [ -f "${TEST_FAILURE_FILE}" ] || (${RM} "${TEST_FAILURE_FILE}"; exit 1)
 
 clean:
 	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC}
