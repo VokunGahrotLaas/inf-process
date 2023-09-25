@@ -59,11 +59,7 @@ public:
 
 	void close(inf::source_location location = inf::source_location::current())
 	{
-		if (fd_ > 0)
-		{
-			errno_guard errg{ "close" };
-			if (INF_CLOSE(fd_) < 0) errg.throw_error(location);
-		}
+		if (fd_ >= 0) io::close(fd_, location);
 		fd_ = -1;
 		size_ = 0;
 	}
