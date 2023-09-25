@@ -192,8 +192,8 @@ pre_check:
 
 check: pre_check ${TEST_EXEC} .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
 	@[ -f ${TEST_FAILURE_FILE} ] \
-		&& (${RM} ${TEST_FAILURE_FILE}; ${PRINTF_RED} "CHECK FAILURE") \
-		|| ${PRINTF_GREEN} "CHECK SUCCESS"
+		|| ${PRINTF_GREEN} "CHECK SUCCESS" \
+		&& (${RM} ${TEST_FAILURE_FILE}; ${PRINTF_RED} "CHECK FAILURE"; exit 1)
 
 clean:
 	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC}
