@@ -7,9 +7,9 @@
 #include <inf/spawn.hpp>
 #include <inf/stdio_stream.hpp>
 
-int int_of_str(std::string_view str) { return std::atoi(str.data()); }
-
 std::size_t size_of_str(std::string_view str) { return static_cast<std::size_t>(std::atoll(str.data())); }
+
+std::intptr_t intptr_of_str(std::string_view str) { return std::atoll(str.data()); }
 
 int main(int argc, char** argv)
 {
@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
 	if (is_child)
 	{
-		auto shm = inf::shared_memory::from_fd(int_of_str(argv[1]), size_of_str(argv[2]));
+		auto shm = inf::shared_memory::from_native_handle(intptr_of_str(argv[1]), size_of_str(argv[2]));
 		auto map = shm.map<char>();
 		shm.close();
 		std::string_view str = "Hello World!";
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 
 	inf::shared_memory shm{ 4'096 };
 
-	std::string handle = std::to_string(shm.fd());
+	std::string handle = std::to_string(shm.native_handle());
 	std::string size = std::to_string(shm.size());
 	char* child_argv[] = { argv[0], handle.data(), size.data(), nullptr };
 	inf::spawn spawn{ argv[0], child_argv, nullptr };

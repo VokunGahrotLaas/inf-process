@@ -48,8 +48,10 @@ TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_EXEC_LINUX = ${addprefix ${dir}/,${TEST_SRC:.cpp=.out}}
 TEST_EXEC_WIN = ${addprefix ${dir}/,${TEST_SRC:.cpp=.exe}}
 ifeq (${target},linux)
+TEST_EXT = .out
 TEST_EXEC = ${TEST_EXEC_LINUX}
 else
+TEST_EXT = .exe
 TEST_EXEC = ${TEST_EXEC_WIN}
 endif
 
@@ -173,17 +175,14 @@ endif
 ${dir}/src/%.o: src/%.cpp | ${dir}/src
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-${dir}/tests/%.out: tests/%.cpp ${LIB} | ${dir}/tests
-	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
-
-${dir}/tests/%.exe: tests/%.cpp ${LIB} | ${dir}/tests
+${dir}/tests/%${TEST_EXT}: tests/%.cpp ${LIB} | ${dir}/tests
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
 
 lib: ${LIB}
 
 tests: ${TEST_EXEC}
 
-check_%: ${dir}/tests/test-%.out phony_explicit
+check_%: ${dir}/tests/test-%${TEST_EXT} phony_explicit
 	@echo ${prefix} ./$<; \
 	echo /${SEP}; \
 	if ${ENV_PREFIX} ${prefix} ./$<; then \

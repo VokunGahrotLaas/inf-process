@@ -103,7 +103,7 @@ public:
 	static basic_stdio_stream from_handle(HANDLE handle, std::ios_base::openmode mode = DefaultMode,
 										  inf::source_location location = inf::source_location::current())
 	{
-		return basic_stdio_stream::from_fd(winhandle_to_fd(
+		return basic_stdio_stream::from_fd(io::winhandle_to_fd(
 			handle, open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT)), location));
 	}
 #endif
@@ -148,7 +148,7 @@ public:
 #else
 	HANDLE native_handle(inf::source_location location = inf::source_location::current())
 	{
-		return fd_to_winhandle(fd(), location);
+		return io::fd_to_winhandle(fd(), location);
 	}
 #endif
 

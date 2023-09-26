@@ -32,36 +32,34 @@ public:
 		: memory_map{ E, data }
 	{}
 
-	explicit memory_map(int fd, std::size_t size, ::off_t offset = 0,
+	explicit memory_map(intptr_t handle, std::size_t size, ::off_t offset = 0,
 						inf::source_location location = inf::source_location::current())
 		: super_type{ static_cast<T*>(nullptr), size }
 	{
 #ifndef _WIN32
 		errno_guard errg{ "mmap" };
-		void* ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
+		void* ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, handle, offset);
 		if (ptr == MAP_FAILED) errg.throw_error(location);
 #else
-		HANDLE handle = fd_to_winhandle(fd, location);
 		errno_guard errg{ "MapViewOfFile" };
-		void* ptr = ::MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, offset, size);
+		void* ptr = ::MapViewOfFile(reinterpret_cast<HANDLE>(handle), FILE_MAP_ALL_ACCESS, 0, offset, size);
 		if (ptr == nullptr) errg.throw_error(location);
 #endif
 		super_type::operator=(super_type{ reinterpret_cast<T*>(ptr), size });
 		std::uninitialized_default_construct(super_type::begin(), super_type::end());
 	}
 
-	explicit memory_map(int fd, std::size_t size, T const& data, ::off_t offset = 0,
+	explicit memory_map(intptr_t handle, std::size_t size, T const& data, ::off_t offset = 0,
 						inf::source_location location = inf::source_location::current())
 		: super_type{ static_cast<T*>(nullptr), size }
 	{
 #ifndef _WIN32
 		errno_guard errg{ "mmap" };
-		void* ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
+		void* ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, handle, offset);
 		if (ptr == MAP_FAILED) errg.throw_error(location);
 #else
-		HANDLE handle = fd_to_winhandle(fd, location);
 		errno_guard errg{ "MapViewOfFile" };
-		void* ptr = ::MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, offset, size);
+		void* ptr = ::MapViewOfFile(reinterpret_cast<HANDLE>(handle), FILE_MAP_ALL_ACCESS, 0, offset, size);
 		if (ptr == nullptr) errg.throw_error(location);
 #endif
 		super_type::operator=(super_type{ reinterpret_cast<T*>(ptr), size });

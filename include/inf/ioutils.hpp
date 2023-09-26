@@ -42,9 +42,13 @@ inline void close(int fd, inf::source_location location = inf::source_location::
 	if (INF_IO_CLOSE(fd) < 0) errg.throw_error(location);
 }
 
-} // namespace io
-
 #ifdef _WIN32
+
+inline void close_handle(HANDLE handle, inf::source_location location = inf::source_location::current())
+{
+	errno_guard errg{ "::CloseHandle" };
+	if (!::CloseHandle(handle)) errg.throw_error(location);
+}
 
 inline int winhandle_to_fd(HANDLE handle, int flags, inf::source_location location = inf::source_location::current())
 {
@@ -61,6 +65,9 @@ inline HANDLE fd_to_winhandle(int fd, inf::source_location location = inf::sourc
 	if (handle == INVALID_HANDLE_VALUE) errg.throw_error(location);
 	return handle;
 }
+
 #endif
+
+} // namespace io
 
 } // namespace inf
