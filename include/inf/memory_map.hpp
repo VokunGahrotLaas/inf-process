@@ -23,21 +23,20 @@ class memory_map
 public:
 	explicit memory_map(intptr_t handle, std::size_t size, ::off_t offset = 0,
 						inf::source_location location = inf::source_location::current())
-		: map_{ nullptr }
-		, capacity_{ size }
+		: span_{ static_cast<std::byte*>(nullptr), 0 }
 		, size_{ 0 }
 	{
+		void* ptr = nullptr;
 #ifndef _WIN32
 		errno_guard errg{ "mmap" };
-		map_ = static_cast<decltype(map_)>(
-			::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, static_cast<int>(handle), offset));
-		if (map_ == MAP_FAILED) errg.throw_error(location);
+		ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, static_cast<int>(handle), offset);
+		if (ptr == MAP_FAILED) errg.throw_error(location);
 #else
 		errno_guard errg{ "MapViewOfFile" };
-		map_ = static_cast<decltype(map_)>(
-			::MapViewOfFile(reinterpret_cast<HANDLE>(handle), FILE_MAP_ALL_ACCESS, 0, offset, size));
-		if (map_ == nullptr) errg.throw_error(location);
+		ptr = ::MapViewOfFile(reinterpret_cast<HANDLE>(handle), FILE_MAP_ALL_ACCESS, 0, offset, size);
+		if (ptr == nullptr) errg.throw_error(location);
 #endif
+		span_ = std::span<std::byte>{ static_cast<std::byte*>(ptr), size };
 	}
 
 	memory_map(memory_map const&) = delete;
@@ -50,44 +49,75 @@ public:
 
 	void close(inf::source_location location = inf::source_location::current())
 	{
-		for (auto& deleter: deleters_)
+		for (auto [ptr, deleter]: deleters_)
 			deleter();
 		deleters_.clear();
-		if (map_ != nullptr)
+		if (data() != nullptr)
 		{
 #ifndef _WIN32
 			errno_guard errg{ "munmap" };
-			if (::munmap(map_, capacity_) < 0) errg.throw_error(location);
+			if (::munmap(data(), capacity()) < 0) errg.throw_error(location);
 #else
 			errno_guard errg{ "UnmapViewOfFile" };
-			if (!::UnmapViewOfFile(map_)) errg.throw_error(location);
+			if (!::UnmapViewOfFile(data())) errg.throw_error(location);
 #endif
 		}
+		span_ = std::span<std::byte>{ static_cast<std::byte*>(nullptr), 0 };
 	}
 
-	inline void* data() { return map_; }
-	inline void const* data() const { return map_; }
+	inline void* data() { return span_.data(); }
+	inline void const* data() const { return span_.data(); }
 
 	inline std::size_t size() const { return size_; }
-	inline std::size_t capacity() const { return capacity_; }
+	inline std::size_t capacity() const { return span_.size(); }
 
 	template <typename T>
 	T& allocate(source_location location = source_location::current())
 	{
-		void* ptr = map_ + size_;
-		std::size_t size = capacity_ - size_;
-		if (std::align(alignof(T), sizeof(T), ptr, size) == nullptr) throw exception("out of bound", location);
-		size_ += sizeof(T) + (capacity_ - size_ - size);
+		void* ptr = span_.data() + size();
+		std::size_t space = capacity() - size();
+		if (std::align(alignof(T), sizeof(T), ptr, space) == nullptr) throw exception("out of bound", location);
+		size_ += sizeof(T) + (capacity() - size() - space);
 		return *static_cast<T*>(ptr);
 	}
 
 	template <typename T, typename... Args>
 	T& construct(Args&&... args)
 	{
-		T* ptr = &allocate<T>();
+		T* ptr = std::addressof(allocate<T>());
 		::new (static_cast<void*>(ptr)) T(std::forward<Args>(args)...);
-		deleters_.push_back([ptr]() { std::destroy_at(ptr); });
+		deleters_.insert({ ptr, [ptr]() { std::destroy_at(ptr); } });
 		return *ptr;
+	}
+
+	template <typename T>
+	void release(T& value, source_location location = source_location::current())
+	{
+		T* ptr = std::addressof(value);
+		auto it = deleters_.find(ptr);
+		if (it == deleters_.end()) throw exception("was not releasable", location);
+		deleters_.erase(it);
+	}
+
+	template <typename T>
+	void destroy(T& value, source_location location = source_location::current())
+	{
+		T* ptr = std::addressof(value);
+		auto it = deleters_.find(ptr);
+		if (it == deleters_.end()) throw exception("was not destroyable", location);
+		it->second();
+		deleters_.erase(it);
+	}
+
+	template <typename T>
+	void acquire(T& value, source_location location = source_location::current())
+	{
+		T* ptr = std::addressof(value);
+		if (reinterpret_cast<std::byte*>(ptr) < span_.data()
+			|| span_.data() + span_.size() <= reinterpret_cast<std::byte*>(ptr))
+			throw exception("out of bounds", location);
+		if (!deleters_.insert({ ptr, [ptr]() { std::destroy_at(ptr); } }).second)
+			throw exception("was already owned", location);
 	}
 
 	template <typename T, std::size_t E = std::dynamic_extent>
@@ -95,11 +125,11 @@ public:
 	{
 		if (nb == 0 && E == std::dynamic_extent) throw exception("invalid arg", location);
 		if (nb == 0) nb = E;
-		void* ptr = map_ + size_;
-		std::size_t size = capacity_ - size_;
-		if (std::align(alignof(T), sizeof(T) * nb, ptr, size) == nullptr) throw exception("out of bound", location);
-		size_ += sizeof(T) * nb + (capacity_ - size_ - size);
-		deleters_.push_back([ptr, nb]() { std::destroy_n(static_cast<T*>(ptr), nb); });
+		void* ptr = span_.data() + size();
+		std::size_t space = capacity() - size();
+		if (std::align(alignof(T), sizeof(T) * nb, ptr, space) == nullptr) throw exception("out of bound", location);
+		size_ += sizeof(T) * nb + (capacity() - size() - space);
+		deleters_.insert({ ptr, [ptr, nb]() { std::destroy_n(static_cast<T*>(ptr), nb); } });
 		return std::span<T, E>{ static_cast<T*>(ptr), nb };
 	}
 
@@ -120,11 +150,37 @@ public:
 		return span;
 	}
 
+	template <typename T, std::size_t E>
+	void release_array(std::span<T, E> value, source_location location = source_location::current())
+	{
+		auto it = deleters_.find(value.data());
+		if (it == deleters_.end()) throw exception("was not releasable", location);
+		deleters_.erase(it);
+	}
+
+	template <typename T, std::size_t E>
+	void destroy_array(std::span<T, E> value, source_location location = source_location::current())
+	{
+		auto it = deleters_.find(value.data());
+		if (it == deleters_.end()) throw exception("was not destroyable", location);
+		it->second();
+		deleters_.erase(it);
+	}
+
+	template <typename T, std::size_t E>
+	void acquire_array(std::span<T, E> value, source_location location = source_location::current())
+	{
+		if (reinterpret_cast<std::byte*>(value.data()) < span_.data()
+			|| span_.data() + span_.size() <= reinterpret_cast<std::byte*>(value.data()))
+			throw exception("out of bounds", location);
+		if (!deleters_.insert({ value.data(), [value]() { std::destroy_n(value.data(), value.size()); } }).second)
+			throw exception("was already owned", location);
+	}
+
 private:
-	std::byte* map_{ nullptr };
-	std::size_t capacity_{ 0 };
+	std::span<std::byte> span_{ static_cast<std::byte*>(nullptr), 0 };
 	std::size_t size_{ 0 };
-	std::vector<std::function<void()>> deleters_{};
+	std::unordered_map<void*, std::function<void()>> deleters_{};
 };
 
 } // namespace inf
