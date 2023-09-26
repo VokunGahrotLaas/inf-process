@@ -27,25 +27,30 @@ int main(int argc, char** argv)
 	if (is_child)
 	{
 		auto shm = inf::shared_memory::from_native_handle(intptr_of_str(argv[1]), size_of_str(argv[2]));
-		auto map = shm.map<char>();
+		auto map = shm.map();
 		shm.close();
 		std::string_view str = "Hello World!";
-		std::copy(str.begin(), str.end(), map.data());
+		auto size = map.construct<size_t>(str.size() + 1);
+		auto chars = map.construct_array<char>(size);
+		std::copy(str.begin(), str.end(), chars.begin());
+		chars.back() = '\0';
 		return 0;
 	}
 
 	inf::shared_memory shm{ 4'096 };
 
 	std::string handle = std::to_string(shm.native_handle());
-	std::string size = std::to_string(shm.size());
-	char* child_argv[] = { argv[0], handle.data(), size.data(), nullptr };
+	std::string shm_size = std::to_string(shm.size());
+	char* child_argv[] = { argv[0], handle.data(), shm_size.data(), nullptr };
 	inf::spawn spawn{ argv[0], child_argv, nullptr };
 
-	auto map = shm.map<char>();
+	auto map = shm.map();
 	shm.close();
 	spawn.wait_exit();
 
-	inf::cout << "mmap: " << std::string_view{ map.data() } << std::endl;
+	auto size = map.allocate<size_t>();
+	auto chars = map.allocate_array<char>(size);
+	inf::cout << "mmap: " << std::string_view{ chars.data(), chars.size() } << std::endl;
 
 	return 0;
 }

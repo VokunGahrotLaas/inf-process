@@ -10,7 +10,7 @@
 int main(void)
 {
 	inf::shared_memory shm{ 4'096 };
-	auto map = shm.map<char>();
+	auto map = shm.map();
 	shm.close();
 
 	inf::fork fork;
@@ -18,13 +18,18 @@ int main(void)
 	if (fork.is_child())
 	{
 		std::string_view str = "Hello World!";
-		std::copy(str.begin(), str.end(), map.data());
+		auto size = map.construct<size_t>(str.size() + 1);
+		auto chars = map.construct_array<char>(size);
+		std::copy(str.begin(), str.end(), chars.begin());
+		chars.back() = '\0';
 		return 0;
 	}
 
 	fork.wait_exit();
 
-	inf::cout << "mmap: " << std::string_view{ map.data() } << std::endl;
+	auto size = map.allocate<size_t>();
+	auto chars = map.allocate_array<char>(size);
+	inf::cout << "mmap: " << std::string_view{ chars.data(), chars.size() } << std::endl;
 
 	return 0;
 }

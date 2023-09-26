@@ -5,12 +5,13 @@
 int main()
 {
 	inf::shared_memory shm{ 4'096 };
-	auto map0 = shm.map<int>();
-	auto map1 = shm.map<int>();
+	auto map0 = shm.map();
+	auto map1 = shm.map();
 	shm.close();
-	map0[0] = 42;
-	inf::cout << "map1: " << map1[0] << std::endl;
-	map1[0] = 24;
-	inf::cout << "map0: " << map0[0] << std::endl;
+	auto& i0 = map0.construct<int>(42);
+	auto& i1 = map1.allocate<int>();
+	inf::cout << "map1: " << i1 << std::endl;
+	i1 = 24;
+	inf::cout << "map0: " << i0 << std::endl;
 	return 0;
 }

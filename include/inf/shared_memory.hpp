@@ -78,14 +78,12 @@ public:
 		size_ = 0;
 	}
 
-	template <typename T, std::size_t E = std::dynamic_extent>
-	memory_map<T, E> map(std::size_t size = npos, std::size_t offset = 0,
-						 inf::source_location location = inf::source_location::current())
+	memory_map map(std::size_t size = npos, std::size_t offset = 0,
+				   inf::source_location location = inf::source_location::current())
 	{
-		if (offset >= size_ || size == 0 || (size + offset > size_ ? size_ - offset : size) < sizeof(T))
-			throw exception("out of bounds", location);
-		return memory_map<T, E>{ handle_, (size + offset > size_ ? size_ - offset : size) / sizeof(T),
-								 static_cast<::off_t>(offset * sizeof(T)), location };
+		if (offset >= size_ || size == 0) throw exception("out of bounds", location);
+		return memory_map{ handle_, size + offset > size_ ? size_ - offset : size, static_cast<::off_t>(offset),
+						   location };
 	}
 
 	static constexpr std::size_t npos = static_cast<std::size_t>(-1);
