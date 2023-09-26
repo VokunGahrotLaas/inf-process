@@ -48,7 +48,7 @@ public:
 
 	errno_exception(std::string_view func, int errno_nb,
 					inf::source_location location = inf::source_location::current()) noexcept
-		: super_type{ string_of_stream("inf::errno_exception: ", func_, "() failed with errno ", errno_nb_), location }
+		: super_type{ string_of_stream("inf::errno_exception: ", func, "() failed with errno ", errno_nb_), location }
 		, func_{ func }
 		, errno_nb_(errno_nb)
 	{}

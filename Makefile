@@ -45,7 +45,13 @@ TEST_CXXFLAGS = ${CXXFLAGS}
 TEST_LDFLAGS = ${LDFLAGS}
 
 TEST_SRC = ${wildcard tests/test-*.cpp}
-TEST_EXEC = ${addprefix ${dir}/,${TEST_SRC:.cpp=.out}}
+TEST_EXEC_LINUX = ${addprefix ${dir}/,${TEST_SRC:.cpp=.out}}
+TEST_EXEC_WIN = ${addprefix ${dir}/,${TEST_SRC:.cpp=.exe}}
+ifeq (${target},linux)
+TEST_EXEC = ${TEST_EXEC_LINUX}
+else
+TEST_EXEC = ${TEST_EXEC_WIN}
+endif
 
 SEP = -------------------------------
 TEST_FAILURE_FILE = ${dir}/.test-failure
@@ -170,6 +176,9 @@ ${dir}/src/%.o: src/%.cpp | ${dir}/src
 ${dir}/tests/%.out: tests/%.cpp ${LIB} | ${dir}/tests
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
 
+${dir}/tests/%.exe: tests/%.cpp ${LIB} | ${dir}/tests
+	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
+
 lib: ${LIB}
 
 tests: ${TEST_EXEC}
@@ -197,7 +206,7 @@ check: pre_check ${TEST_EXEC} .WAIT ${addprefix check_,${subst tests/test-,,${ba
 	@! [ -f "${TEST_FAILURE_FILE}" ] || (${RM} "${TEST_FAILURE_FILE}"; exit 1)
 
 clean:
-	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC}
+	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC_WIN} ${TEST_EXEC_LINUX}
 ifneq (${realpath ${dir}},${realpath .})
 ifneq (${wildcard ${dir}/src},)
 	${RMDIR} ${dir}/src
