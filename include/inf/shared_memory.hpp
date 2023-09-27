@@ -87,19 +87,15 @@ public:
 						   location };
 	}
 
+#ifndef _WIN32
 	void resize(std::size_t size, source_location location = source_location::current())
 	{
 		if (size == size_) return;
-#ifndef _WIN32
 		errno_guard errg{ "ftruncate" };
 		if (ftruncate(fd(), static_cast<::off_t>(size)) < 0) errg.throw_error(location);
-#else
-		errno_guard errg{ "SetFilePointerEx" };
-		if (!SetFilePointerEx(handle(), LARGE_INTEGER{ .QuadPart = static_cast<std::ptrdiff_t>(size) }, nullptr,
-							  FILE_BEGIN))
-			errg.throw_error(location);
-#endif
+		size_ = size;
 	}
+#endif
 
 	static constexpr std::size_t npos = static_cast<std::size_t>(-1);
 

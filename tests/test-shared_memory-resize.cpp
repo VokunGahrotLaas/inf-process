@@ -1,6 +1,7 @@
+#ifndef _WIN32
 // inf
-#include <inf/shared_memory.hpp>
-#include <inf/stdio_stream.hpp>
+#	include <inf/shared_memory.hpp>
+#	include <inf/stdio_stream.hpp>
 
 int main()
 {
@@ -21,3 +22,12 @@ int main()
 	inf::cout << "map2: " << i2 << std::endl;
 	return 0;
 }
+#else
+#	include <inf/stdio_stream.hpp>
+
+int main()
+{
+	inf::cout << "Cannot resize anonymous mapping on windows yet." << std::endl;
+	return 0;
+}
+#endif
