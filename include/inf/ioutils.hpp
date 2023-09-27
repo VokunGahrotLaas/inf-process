@@ -36,7 +36,7 @@ namespace inf
 namespace io
 {
 
-inline void close(int fd, inf::source_location location = inf::source_location::current())
+inline void close(int fd, source_location location = source_location::current())
 {
 	errno_guard errg{ INF_STRX(INF_IO_CLOSE) };
 	if (INF_IO_CLOSE(fd) < 0) errg.throw_error(location);
@@ -44,13 +44,13 @@ inline void close(int fd, inf::source_location location = inf::source_location::
 
 #ifdef _WIN32
 
-inline void close_handle(HANDLE handle, inf::source_location location = inf::source_location::current())
+inline void close_handle(HANDLE handle, source_location location = source_location::current())
 {
 	errno_guard errg{ "::CloseHandle" };
 	if (!::CloseHandle(handle)) errg.throw_error(location);
 }
 
-inline int winhandle_to_fd(HANDLE handle, int flags, inf::source_location location = inf::source_location::current())
+inline int winhandle_to_fd(HANDLE handle, int flags, source_location location = source_location::current())
 {
 	errno_guard errg{ "_open_osfhandle" };
 	int fd = ::_open_osfhandle(reinterpret_cast<intptr_t>(handle), flags);
@@ -58,7 +58,7 @@ inline int winhandle_to_fd(HANDLE handle, int flags, inf::source_location locati
 	return fd;
 }
 
-inline HANDLE fd_to_winhandle(int fd, inf::source_location location = inf::source_location::current())
+inline HANDLE fd_to_winhandle(int fd, source_location location = source_location::current())
 {
 	errno_guard errg{ "_get_osfhandle" };
 	HANDLE handle = reinterpret_cast<HANDLE>(::_get_osfhandle(fd));

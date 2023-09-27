@@ -101,7 +101,7 @@ public:
 
 #ifdef _WIN32
 	static basic_stdio_stream from_handle(HANDLE handle, std::ios_base::openmode mode = DefaultMode,
-										  inf::source_location location = inf::source_location::current())
+										  source_location location = source_location::current())
 	{
 		return basic_stdio_stream::from_fd(io::winhandle_to_fd(
 			handle, open_mode_winflags(mode, (std::is_same_v<CharT, char> ? _O_TEXT : _O_WTEXT)), location));
@@ -144,9 +144,9 @@ public:
 	int fd() { return file() != nullptr ? ::fileno(file()) : -1; }
 
 #ifndef _WIN32
-	int native_handle([[maybe_unused]] inf::source_location location = inf::source_location::current()) { return fd(); }
+	int native_handle([[maybe_unused]] source_location location = source_location::current()) { return fd(); }
 #else
-	HANDLE native_handle(inf::source_location location = inf::source_location::current())
+	HANDLE native_handle(source_location location = source_location::current())
 	{
 		return io::fd_to_winhandle(fd(), location);
 	}
@@ -157,7 +157,7 @@ public:
 	void close() { buf_.close(); }
 
 	basic_stdio_stream dup(std::ios_base::openmode mode = DefaultMode,
-						   inf::source_location location = inf::source_location::current()) const
+						   source_location location = source_location::current()) const
 	{
 		int new_fd = -1;
 		errno_guard errg{ "dup" };
@@ -166,7 +166,7 @@ public:
 		return basic_stdio_stream::from_fd(new_fd, mode);
 	}
 
-	void dup(basic_stdio_stream& other, inf::source_location location = inf::source_location::current()) const
+	void dup(basic_stdio_stream& other, source_location location = source_location::current()) const
 	{
 		errno_guard errg{ "dup2" };
 		int res = INF_DUP2(private_fd(), other.fd());
@@ -174,7 +174,7 @@ public:
 	}
 
 	basic_stdio_stream safe_dup(std::ios_base::openmode mode = DefaultMode,
-								inf::source_location location = inf::source_location::current())
+								source_location location = source_location::current())
 	{
 		basic_stdio_stream dupped = dup(mode, location);
 		close();
@@ -182,7 +182,7 @@ public:
 	}
 
 	basic_stdio_stream safe_dup(basic_stdio_stream& other, std::ios_base::openmode mode = DefaultMode,
-								inf::source_location location = inf::source_location::current())
+								source_location location = source_location::current())
 	{
 		basic_stdio_stream backup = other.dup(mode, location);
 		dup(other, location);
@@ -190,7 +190,7 @@ public:
 		return backup;
 	}
 
-	void dup_back(basic_stdio_stream& other, inf::source_location location = inf::source_location::current())
+	void dup_back(basic_stdio_stream& other, source_location location = source_location::current())
 	{
 		dup(other, location);
 		close();

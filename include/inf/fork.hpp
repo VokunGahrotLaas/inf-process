@@ -26,7 +26,7 @@ public:
 		PARENT
 	};
 
-	fork(inf::source_location location = inf::source_location::current())
+	fork(source_location location = source_location::current())
 		: pid_{ -1 }
 	{
 		errno_guard errg{ "fork" };
@@ -44,7 +44,7 @@ public:
 
 	pid_t pid() const { return pid_; }
 
-	int wait(inf::source_location location = inf::source_location::current())
+	int wait(source_location location = source_location::current())
 	{
 		if (pid_ <= 0) return -1;
 		int status = -1;
@@ -55,7 +55,7 @@ public:
 	}
 
 	void wait_exit(std::function<bool(int)> pred = inf::status_equals<0>,
-				   inf::source_location location = inf::source_location::current())
+				   source_location location = source_location::current())
 	{
 		int status = wait();
 		if (!WIFEXITED(status)) throw status_exception(status, location);
@@ -63,7 +63,7 @@ public:
 		if (!pred(status)) throw status_exception(status, location);
 	}
 
-	bool peek(inf::source_location location = inf::source_location::current())
+	bool peek(source_location location = source_location::current())
 	{
 		if (pid_ <= 0) return -1;
 		siginfo_t status;

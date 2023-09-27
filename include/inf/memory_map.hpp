@@ -22,7 +22,7 @@ class memory_map
 {
 public:
 	explicit memory_map(intptr_t handle, std::size_t size, std::ptrdiff_t offset = 0,
-						inf::source_location location = inf::source_location::current())
+						source_location location = source_location::current())
 		: span_{ static_cast<std::byte*>(nullptr), 0 }
 		, size_{ 0 }
 	{
@@ -50,7 +50,7 @@ public:
 
 	~memory_map() { close(); }
 
-	void close(inf::source_location location = inf::source_location::current())
+	void close(source_location location = source_location::current())
 	{
 		for (auto [ptr, deleter]: deleters_)
 			deleter();

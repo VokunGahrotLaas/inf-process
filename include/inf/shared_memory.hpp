@@ -22,7 +22,7 @@ namespace inf
 class shared_memory
 {
 public:
-	explicit shared_memory(std::size_t size, inf::source_location location = inf::source_location::current())
+	explicit shared_memory(std::size_t size, source_location location = source_location::current())
 	{
 #ifndef _WIN32
 		{
@@ -68,7 +68,7 @@ public:
 
 	std::size_t size() const { return size_; }
 
-	void close(inf::source_location location = inf::source_location::current())
+	void close(source_location location = source_location::current())
 	{
 #ifndef _WIN32
 		if (fd() >= 0) io::close(fd(), location);

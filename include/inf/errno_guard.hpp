@@ -21,7 +21,7 @@ public:
 
 	~errno_guard() { errno = old_errno_; }
 
-	void throw_error(inf::source_location location = inf::source_location::current())
+	void throw_error(source_location location = source_location::current())
 	{
 		throw errno_exception(func_, errno, location);
 	}

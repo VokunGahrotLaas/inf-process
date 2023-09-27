@@ -28,8 +28,7 @@ std::function<bool(int)> status_equals = [](int status) -> bool { return status 
 class spawn
 {
 public:
-	spawn(char const* path, char* const* argv, char* const* envp,
-		  inf::source_location location = inf::source_location::current())
+	spawn(char const* path, char* const* argv, char* const* envp, source_location location = source_location::current())
 #ifndef _WIN32
 		: pid_{ -1 }
 #else
@@ -54,7 +53,7 @@ public:
 	intptr_t handle() const { return handle_; }
 #endif
 
-	int wait(inf::source_location location = inf::source_location::current())
+	int wait(source_location location = source_location::current())
 	{
 		int status = -1;
 #ifndef _WIN32
@@ -72,7 +71,7 @@ public:
 	}
 
 	void wait_exit(std::function<bool(int)> pred = inf::status_equals<0>,
-				   inf::source_location location = inf::source_location::current())
+				   source_location location = source_location::current())
 	{
 		int status = wait();
 #ifndef _WIN32
@@ -83,7 +82,7 @@ public:
 	}
 
 #ifndef _WIN32
-	int peek(inf::source_location location = inf::source_location::current())
+	int peek(source_location location = source_location::current())
 	{
 		if (pid_ <= 0) return -1;
 		siginfo_t status;
