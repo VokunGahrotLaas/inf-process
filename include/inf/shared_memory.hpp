@@ -40,7 +40,8 @@ public:
 			errno_guard errg{ "CreateFileMappingA" };
 			SECURITY_ATTRIBUTES sec_attr{ sizeof(sec_attr), nullptr, true };
 			uint32_t low = size & 0xffffffffu;
-			uint32_t high = size >> 32;
+			uint32_t high = 0;
+			if constexpr (sizeof(size_t) > sizeof(uint32_t)) high = size >> 32;
 			handle_ = reinterpret_cast<intptr_t>(
 				::CreateFileMappingA(INVALID_HANDLE_VALUE, &sec_attr, PAGE_READWRITE | SEC_COMMIT, high, low, nullptr));
 			if (handle() == nullptr) errg.throw_error(location);
@@ -79,11 +80,25 @@ public:
 	}
 
 	memory_map map(std::size_t size = npos, std::size_t offset = 0,
-				   inf::source_location location = inf::source_location::current())
+				   source_location location = source_location::current())
 	{
 		if (offset >= size_ || size == 0) throw exception("out of bounds", location);
-		return memory_map{ handle_, size + offset > size_ ? size_ - offset : size, static_cast<::off_t>(offset),
+		return memory_map{ handle_, size + offset > size_ ? size_ - offset : size, static_cast<std::ptrdiff_t>(offset),
 						   location };
+	}
+
+	void resize(std::size_t size, source_location location = source_location::current())
+	{
+		if (size == size_) return;
+#ifndef _WIN32
+		errno_guard errg{ "ftruncate" };
+		if (ftruncate(fd(), static_cast<::off_t>(size)) < 0) errg.throw_error(location);
+#else
+		errno_guard errg{ "SetFilePointerEx" };
+		if (!SetFilePointerEx(handle(), LARGE_INTEGER{ .QuadPart = static_cast<std::ptrdiff_t>(size) }, nullptr,
+							  FILE_BEGIN))
+			errg.throw_error(location);
+#endif
 	}
 
 	static constexpr std::size_t npos = static_cast<std::size_t>(-1);

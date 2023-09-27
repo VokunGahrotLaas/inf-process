@@ -21,7 +21,7 @@ namespace inf
 class memory_map
 {
 public:
-	explicit memory_map(intptr_t handle, std::size_t size, ::off_t offset = 0,
+	explicit memory_map(intptr_t handle, std::size_t size, std::ptrdiff_t offset = 0,
 						inf::source_location location = inf::source_location::current())
 		: span_{ static_cast<std::byte*>(nullptr), 0 }
 		, size_{ 0 }
@@ -33,7 +33,10 @@ public:
 		if (ptr == MAP_FAILED) errg.throw_error(location);
 #else
 		errno_guard errg{ "MapViewOfFile" };
-		ptr = ::MapViewOfFile(reinterpret_cast<HANDLE>(handle), FILE_MAP_ALL_ACCESS, 0, offset, size);
+		int32_t high = 0;
+		if constexpr (sizeof(offset) > sizeof(int32_t)) high = offset >> 32;
+		int32_t low = offset & 0xffffffff;
+		ptr = ::MapViewOfFile(reinterpret_cast<HANDLE>(handle), FILE_MAP_ALL_ACCESS, high, low, size);
 		if (ptr == nullptr) errg.throw_error(location);
 #endif
 		span_ = std::span<std::byte>{ static_cast<std::byte*>(ptr), size };
