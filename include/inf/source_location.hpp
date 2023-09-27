@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef __cpp_lib_source_location
 
 #	include <source_location>
@@ -23,12 +25,7 @@ struct source_location
 											 char const* func = __builtin_FUNCTION(), int line = __builtin_LINE(),
 											 int col = 0) noexcept
 	{
-		source_location loc;
-		loc.file_ = file;
-		loc.func_ = func;
-		loc.line_ = static_cast<decltype(loc.line_)>(line);
-		loc.col_ = static_cast<decltype(loc.col_)>(col);
-		return loc;
+		return source_location{ file, func, static_cast<uint_least32_t>(line), static_cast<uint_least32_t>(col) };
 	}
 
 	constexpr source_location() noexcept
@@ -44,6 +41,14 @@ struct source_location
 	constexpr char const* function_name() const noexcept { return func_; }
 
 private:
+	constexpr explicit source_location(char const* file, char const* func, uint_least32_t line,
+									   uint_least32_t col) noexcept
+		: file_(file)
+		, func_(func)
+		, line_(line)
+		, col_(col)
+	{}
+
 	char const* file_;
 	char const* func_;
 	uint_least32_t line_;

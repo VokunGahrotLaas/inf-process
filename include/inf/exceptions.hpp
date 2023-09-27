@@ -7,22 +7,10 @@
 #include <string_view>
 // inf
 #include <inf/source_location.hpp>
+#include <inf/utils.hpp>
 
 namespace inf
 {
-
-namespace
-{
-
-template <typename... Args>
-std::string string_of_stream(Args&&... args)
-{
-	std::stringstream ss;
-	(ss << ... << std::forward<Args>(args));
-	return std::move(ss).str();
-}
-
-} // namespace
 
 class exception : public std::exception
 {
@@ -31,14 +19,18 @@ public:
 
 	exception(std::string_view what, source_location location = source_location::current()) noexcept
 		: what_{ string_of_stream(location.file_name(), ':', location.line(), ':', location.column(), ':', what) }
+		, location_{ location }
 	{}
 
 	~exception() override = default;
 
 	char const* what() const noexcept override { return what_.c_str(); }
 
+	source_location location() const { return location_; }
+
 private:
 	std::string what_;
+	source_location location_;
 };
 
 class errno_exception : public exception
@@ -79,6 +71,24 @@ public:
 
 private:
 	int status_;
+};
+
+class test_exception : public exception
+{
+public:
+	using super_type = exception;
+
+	test_exception(std::string_view why, source_location location = source_location::current()) noexcept
+		: super_type{ string_of_stream("inf::test_exception: ", why), location }
+		, why_{ why }
+	{}
+
+	~test_exception() override = default;
+
+	std::string const& why() const noexcept { return why_; }
+
+private:
+	std::string why_;
 };
 
 } // namespace inf

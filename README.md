@@ -28,11 +28,13 @@ C++ wrapper for C io / POSIX / Windows functions.
 
 * Wrapping mmap on Unix & MapViewOfFile on Windows with inf::memory_map.
 
+* Unit tests with `<inf/tests.hpp>`.
+
 ## TODOs
 
 * write doc with doxygen
 
-* write validating tests
+* write validating tests (WIP)
 
 * add features
 

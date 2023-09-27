@@ -1,16 +1,10 @@
 #pragma once
 
+// STL
+#include <version>
 // inf
 #include <inf/errno_guard.hpp>
-
-#define INF_STR(X) #X
-#define INF_STRX(X) INF_STR(X)
-
-#ifndef _MSC_VER
-#	define INF_GNU_PURE [[gnu::pure]]
-#else
-#	define INF_GNU_PURE
-#endif
+#include <inf/utils.hpp>
 
 #ifndef _WIN32
 #	include <unistd.h>

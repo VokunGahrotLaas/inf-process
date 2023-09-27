@@ -11,6 +11,7 @@
 #include <inf/errno_guard.hpp>
 #include <inf/ioutils.hpp>
 #include <inf/stdiobuf.hpp>
+#include <inf/stream_lock.hpp>
 
 namespace inf
 {
@@ -75,11 +76,18 @@ constexpr wchar_t const* wopen_mode_str(std::ios_base::openmode mode)
 
 template <typename CharT, typename Traits, template <typename CharT2, typename Traits2> class Stream,
 		  std::ios_base::openmode DefaultMode>
-class basic_stdio_stream : public Stream<CharT, Traits>
+class basic_stdio_stream
+	: public Stream<CharT, Traits>
+	, public stream_lockable<basic_stdio_stream<CharT, Traits, Stream, DefaultMode>>
 {
 public:
 	using super_type = Stream<CharT, Traits>;
 	using buf_type = basic_stdiobuf<CharT, Traits>;
+	using char_type = CharT;
+	using traits_type = Traits;
+	using int_type = typename Traits::int_type;
+	using pos_type = typename Traits::pos_type;
+	using off_type = typename Traits::off_type;
 
 	explicit basic_stdio_stream(std::FILE* file)
 		: super_type(&buf_)
