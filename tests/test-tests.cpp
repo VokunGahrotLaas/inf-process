@@ -25,12 +25,12 @@ INF_TEST_SUITE(TestSuite)
 
 // INF_UNIT_TEST(TestSuite, UnitTestFalse, { INF_ASSERT(false); })
 
-INF_UNIT_TEST(TestSuite, UnitTestTrue, { INF_ASSERT(true); })
+INF_UNIT_TEST(TestSuite, UnitTestTrue) { INF_ASSERT(true); }
 
-INF_UNIT_TEST(TestSuite, UnitTestCout0, { inf::cout.lock() << long_str_a << std::endl; })
+INF_UNIT_TEST(TestSuite, UnitTestCout0) { inf::cout.lock() << long_str_a << std::endl; }
 
-INF_UNIT_TEST(TestSuite, UnitTestCout1, { inf::cout.lock() << long_str_b << std::endl; })
+INF_UNIT_TEST(TestSuite, UnitTestCout1) { inf::cout.lock() << long_str_b << std::endl; }
 
-INF_UNIT_TEST(TestSuite, UnitTestCout2, { inf::cout.lock() << long_str_c << std::endl; })
+INF_UNIT_TEST(TestSuite, UnitTestCout2) { inf::cout.lock() << long_str_c << std::endl; }
 
 INF_RUN_TESTS()

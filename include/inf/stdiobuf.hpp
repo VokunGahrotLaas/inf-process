@@ -253,7 +253,8 @@ inline std::streamsize wstdiobuf::xsputn(wchar_t const* s, std::streamsize n)
 	return ret;
 }
 
-#if !defined(INF_HEADER_ONLY) && !defined(INF_STATIC_STDIOBUF)
+#if defined(INF_HEADER_ONLY) || defined(INF_STATIC_STDIOBUF)
+#else
 extern template class basic_stdiobuf<char>;
 extern template class basic_stdiobuf<wchar_t>;
 #endif

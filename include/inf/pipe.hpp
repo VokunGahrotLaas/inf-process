@@ -81,7 +81,8 @@ inline pipe make_pipe() { return make_basic_pipe<char>(); }
 
 inline wpipe make_wpipe() { return make_basic_pipe<wchar_t>(); }
 
-#if !defined(INF_HEADER_ONLY) && !defined(INF_STATIC_PIPE)
+#if defined(INF_HEADER_ONLY) || defined(INF_STATIC_PIPE)
+#else
 extern template class basic_pipe<char>;
 extern template class basic_pipe<wchar_t>;
 #endif

@@ -13,6 +13,7 @@
 #	define INF_DUP ::dup
 #	define INF_DUP2 ::dup2
 #	define INF_IO_CLOSE ::close
+#	define INF_GETPID ::getpid
 #else
 #	include <io.h>
 #	include <fcntl.h>
@@ -22,6 +23,7 @@
 #	define INF_DUP ::_dup
 #	define INF_DUP2 ::_dup2
 #	define INF_IO_CLOSE ::_close
+#	define INF_GETPID ::_getpid
 #endif
 
 namespace inf
@@ -35,6 +37,8 @@ inline void close(int fd, source_location location = source_location::current())
 	errno_guard errg{ INF_STRX(INF_IO_CLOSE) };
 	if (INF_IO_CLOSE(fd) < 0) errg.throw_error(location);
 }
+
+inline int getpid(source_location = source_location::current()) { return INF_GETPID(); }
 
 #ifdef _WIN32
 

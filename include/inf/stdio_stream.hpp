@@ -231,7 +231,16 @@ using wstdio_istream = basic_stdio_istream<wchar_t>;
 using stdio_ostream = basic_stdio_ostream<char>;
 using wstdio_ostream = basic_stdio_ostream<wchar_t>;
 
-#if !defined(INF_HEADER_ONLY) && !defined(INF_STATIC_STDIO_STREAM)
+#if defined(INF_HEADER_ONLY) || defined(INF_STATIC_STDIO_STREAM)
+stdio_ostream cout{ stdout };
+wstdio_ostream wcout{ stdout };
+
+stdio_ostream cerr{ stderr };
+wstdio_ostream wcerr{ stderr };
+
+stdio_istream cin{ stdin };
+wstdio_istream wcin{ stdin };
+#else
 extern template class basic_stdio_stream<char, std::char_traits<char>, std::basic_iostream,
 										 std::ios_base::in | std::ios_base::out>;
 extern template class basic_stdio_stream<wchar_t, std::char_traits<wchar_t>, std::basic_iostream,
@@ -251,15 +260,6 @@ extern wstdio_ostream wcerr;
 
 extern stdio_istream cin;
 extern wstdio_istream wcin;
-#else
-stdio_ostream cout{ stdout };
-wstdio_ostream wcout{ stdout };
-
-stdio_ostream cerr{ stderr };
-wstdio_ostream wcerr{ stderr };
-
-stdio_istream cin{ stdin };
-wstdio_istream wcin{ stdin };
 #endif
 
 } // namespace inf

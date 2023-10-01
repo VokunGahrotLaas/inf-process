@@ -44,16 +44,16 @@ LIB_EXEC = ${dir}/libinf-process-static.a ${dir}/libinf-process.so ${dir}/libinf
 TEST_CXXFLAGS = ${CXXFLAGS}
 TEST_LDFLAGS = ${LDFLAGS}
 
-TEST_SRC = ${wildcard tests/test-*.cpp}
-TEST_EXEC_LINUX = ${addprefix ${dir}/,${TEST_SRC:.cpp=.out}}
-TEST_EXEC_WIN = ${addprefix ${dir}/,${TEST_SRC:.cpp=.exe}}
 ifeq (${target},linux)
 TEST_EXT = .out
-TEST_EXEC = ${TEST_EXEC_LINUX}
 else
 TEST_EXT = .exe
-TEST_EXEC = ${TEST_EXEC_WIN}
 endif
+
+TEST_SRC = ${wildcard tests/test-*.cpp}
+TEST_EXEC = ${addprefix ${dir}/,${TEST_SRC:.cpp=${TEST_EXT}}}
+TESTFAIL_SRC = ${wildcard tests/testfail-*.cpp}
+TESTFAIL_EXEC = ${addprefix ${dir}/,${TESTFAIL_SRC:.cpp=${TEST_EXT}}}
 
 SEP = -------------------------------
 TEST_FAILURE_FILE = ${dir}/.test-failure
@@ -175,12 +175,25 @@ endif
 ${dir}/src/%.o: src/%.cpp | ${dir}/src
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-${dir}/tests/%${TEST_EXT}: tests/%.cpp ${LIB} | ${dir}/tests
+${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB} | ${dir}/tests
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
 
 lib: ${LIB}
 
 tests: ${TEST_EXEC}
+
+checkfail_%: ${dir}/tests/testfail-%${TEST_EXT} phony_explicit
+	@echo ${prefix} ./$<; \
+	echo /${SEP}; \
+	if ${ENV_PREFIX} ${prefix} ./$<; then \
+		printf "%s %s " \\${SEP} "$<"; \
+		${PRINTF_RED} "FAILURE"; \
+		touch ${TEST_FAILURE_FILE}; \
+	else \
+		printf "%s %s " \\${SEP} "$<"; \
+		${PRINTF_GREEN} "SUCCESS"; \
+	fi; \
+	echo
 
 check_%: ${dir}/tests/test-%${TEST_EXT} phony_explicit
 	@echo ${prefix} ./$<; \
@@ -192,20 +205,20 @@ check_%: ${dir}/tests/test-%${TEST_EXT} phony_explicit
 		printf "%s %s " \\${SEP} "$<"; \
 		${PRINTF_RED} "FAILURE"; \
 		touch ${TEST_FAILURE_FILE}; \
-		fi; \
+	fi; \
 	echo
 
 pre_check:
 	${RM} ${TEST_FAILURE_FILE}
 
-check: pre_check ${TEST_EXEC} .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}}
+check: pre_check ${TEST_EXEC} ${TESTFAIL_EXEC} .WAIT ${addprefix check_,${subst tests/test-,,${basename ${TEST_SRC}}}} ${addprefix checkfail_,${subst tests/testfail-,,${basename ${TESTFAIL_SRC}}}}
 	@[ -f "${TEST_FAILURE_FILE}" ] \
 		&& ${PRINTF_RED} "CHECK FAILURE" \
 		|| ${PRINTF_GREEN} "CHECK SUCCESS"
 	@! [ -f "${TEST_FAILURE_FILE}" ] || (${RM} "${TEST_FAILURE_FILE}"; exit 1)
 
 clean:
-	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC_WIN} ${TEST_EXEC_LINUX}
+	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC} ${TESTFAIL_EXEC}
 ifneq (${realpath ${dir}},${realpath .})
 ifneq (${wildcard ${dir}/src},)
 	${RMDIR} ${dir}/src

@@ -9,9 +9,15 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+// Unix / Windows
+#ifndef _WIN32
+#	include <unistd.h>
+#else
+#	include <process.h>
+#endif
 // inf
 #include <inf/exceptions.hpp>
-#include <inf/pipe.hpp>
+#include <inf/ioutils.hpp>
 #include <inf/source_location.hpp>
 #include <inf/stdio_stream.hpp>
 #include <inf/utils.hpp>
@@ -22,23 +28,73 @@
 	static auto& Name = ::inf::make_test_suite(INF_STRX(Name));                                                        \
 	}
 
-#define INF_UNIT_TEST(TestSuite, Name, ...)                                                                            \
+#define INF_UNIT_TEST(TestSuite, Name)                                                                                 \
+	namespace inf::unit_tests_cls::TestSuite                                                                           \
+	{                                                                                                                  \
+	class Name : public ::inf::unit_test                                                                               \
+	{                                                                                                                  \
+	public:                                                                                                            \
+		Name(std::string_view ts, std::string_view name)                                                               \
+			: unit_test{ ts, name }                                                                                    \
+		{}                                                                                                             \
+		Name(const Name&) = delete;                                                                                    \
+		Name(Name&&) = delete;                                                                                         \
+		Name& operator=(const Name&) = delete;                                                                         \
+		Name& operator=(Name&&) = delete;                                                                              \
+                                                                                                                       \
+	protected:                                                                                                         \
+		void main() override;                                                                                          \
+	};                                                                                                                 \
+	}                                                                                                                  \
 	namespace inf::unit_tests_obj::TestSuite                                                                           \
 	{                                                                                                                  \
-	static auto& Name = ::inf::make_unit_test(INF_STRX(TestSuite), INF_STRX(Name),                                     \
-											  []([[maybe_unused]] unit_test& context) { __VA_ARGS__; });               \
-	}
+	static auto& Name =                                                                                                \
+		::inf::make_unit_test<inf::unit_tests_cls::TestSuite::Name>(INF_STRX(TestSuite), INF_STRX(Name));              \
+	}                                                                                                                  \
+	void inf::unit_tests_cls::TestSuite::Name::main()
+
+#define INF_CUST_TEST_SUITE(Name)                                                                                      \
+	namespace inf::test_suites_obj                                                                                     \
+	{                                                                                                                  \
+	static auto& Name = ::inf::make_test_suite(INF_STRX(Name));                                                        \
+	}                                                                                                                  \
+	class Name : public ::inf::unit_test
+
+#define INF_CUST_UNIT_TEST(TestSuite, Name)                                                                            \
+	namespace inf::unit_tests_cls::TestSuite                                                                           \
+	{                                                                                                                  \
+	class Name : public TestSuite                                                                                      \
+	{                                                                                                                  \
+	public:                                                                                                            \
+		Name(std::string_view ts, std::string_view name)                                                               \
+			: TestSuite{ ts, name }                                                                                    \
+		{}                                                                                                             \
+		Name(const Name&) = delete;                                                                                    \
+		Name(Name&&) = delete;                                                                                         \
+		Name& operator=(const Name&) = delete;                                                                         \
+		Name& operator=(Name&&) = delete;                                                                              \
+                                                                                                                       \
+	protected:                                                                                                         \
+		void main() override;                                                                                          \
+	};                                                                                                                 \
+	}                                                                                                                  \
+	namespace inf::unit_tests_obj::TestSuite                                                                           \
+	{                                                                                                                  \
+	static auto& Name =                                                                                                \
+		::inf::make_unit_test<inf::unit_tests_cls::TestSuite::Name>(INF_STRX(TestSuite), INF_STRX(Name));              \
+	}                                                                                                                  \
+	void inf::unit_tests_cls::TestSuite::Name::main()
 
 #define INF_ASSERT(Assertion)                                                                                          \
 	do                                                                                                                 \
 	{                                                                                                                  \
-		if (!(Assertion)) context.assert_fail("Assertion failed: " INF_STRX(Assertion));                               \
+		if (!(Assertion)) this->assert_fail("Assertion failed: " INF_STRX(Assertion));                                 \
 	} while (false)
 
 #define INF_EXPECT(Assertion)                                                                                          \
 	do                                                                                                                 \
 	{                                                                                                                  \
-		if (!(Assertion)) context.expect_fail("Expecation failed: " INF_STRX(Assertion));                              \
+		if (!(Assertion)) this->expect_fail("Expectation failed: " INF_STRX(Assertion));                               \
 	} while (false)
 
 #define INF_RUN_TESTS()                                                                                                \
@@ -57,23 +113,25 @@ class test_suite;
 class unit_test
 {
 public:
-	using func_type = std::function<void(unit_test&)>;
-
+	unit_test() = delete;
 	unit_test(unit_test const&) = delete;
 	unit_test(unit_test&&) = default;
 
 	unit_test& operator=(unit_test const&) = delete;
 	unit_test& operator=(unit_test&&) = delete;
 
-	friend inline unit_test& make_unit_test(std::string test_suite_name, std::string_view name, func_type func,
-											source_location location);
+	virtual void before() {}
+	virtual void main() {}
+	virtual void after() {}
 
-	std::string_view name() const { return name_; }
-
-	std::span<std::pair<source_location, std::string> const> failures() const
-	{
-		return { failures_.data(), failures_.size() };
-	}
+protected:
+	unit_test(std::string_view suite_name, std::string_view name)
+		: suite_name_{ suite_name }
+		, name_{ name }
+		, failures_{}
+		, out_{}
+		, err_{}
+	{}
 
 	void expect_fail(std::string_view what, source_location location = source_location::current())
 	{
@@ -86,41 +144,59 @@ public:
 		throw test_exception(what, location);
 	}
 
+private:
+	friend test_suite;
+
+	std::string_view name() const { return name_; }
+
+	std::span<std::pair<source_location, std::string> const> failures() const
+	{
+		return { failures_.data(), failures_.size() };
+	}
+
 	bool run()
 	{
 		using namespace std::string_literals;
-		/*auto out_pipe = inf::make_pipe();
-		auto err_pipe = inf::make_pipe();
-		auto out_bck = out_pipe.write.safe_dup(inf::cout);
-		auto err_bck = err_pipe.write.safe_dup(inf::cerr);
-		INF_AT_SCOPE_END({
-			out_bck.dup_back(inf::cout);
-			err_bck.dup_back(inf::cerr);
-			out_ = std::string{ std::istreambuf_iterator<char>(out_pipe.read), {} };
-			err_ = std::string{ std::istreambuf_iterator<char>(err_pipe.read), {} };
-		});*/
+		int pid = io::getpid();
 		try
 		{
-			func_(*this);
+			this->before();
+			if (pid != io::getpid()) std::abort();
 		}
-		catch (test_exception& e)
+		catch (...)
 		{
+			expect_fail("test failed during before()");
 			return false;
 		}
+		INF_AT_SCOPE_END({
+			try
+			{
+				this->after();
+				if (pid != io::getpid()) std::abort();
+			}
+			catch (...)
+			{
+				expect_fail("test failed during after()");
+			}
+		});
+		try
+		{
+			this->main();
+			if (pid != io::getpid()) std::abort();
+		}
+		catch (test_exception& e)
+		{}
 		catch (exception& e)
 		{
 			expect_fail("received inf::exception during test: "s + e.what(), e.location());
-			return false;
 		}
 		catch (std::exception& e)
 		{
 			expect_fail("received std::exception during test: "s + e.what());
-			return false;
 		}
 		catch (...)
 		{
 			expect_fail("received exception during test");
-			return false;
 		}
 		return !has_failed();
 	}
@@ -152,21 +228,16 @@ public:
 
 	bool has_failed() const { return !failures_.empty(); }
 
-private:
-	unit_test(std::string_view suite_name, std::string_view name, func_type func)
-		: suite_name_{ suite_name }
-		, name_{ name }
-		, func_{ func }
-		, failures_{}
-	{}
-
 	std::string suite_name_;
 	std::string name_;
-	func_type func_;
 	std::vector<std::pair<source_location, std::string>> failures_;
 	std::string out_;
 	std::string err_;
 };
+
+template <typename UnitTest>
+inline unit_test& make_unit_test(std::string test_suite_name, std::string_view name,
+								 source_location location = source_location::current());
 
 class test_suite
 {
@@ -177,9 +248,10 @@ public:
 	test_suite& operator=(test_suite const&) = delete;
 	test_suite& operator=(test_suite&&) = delete;
 
-	friend inline test_suite& make_test_suite(std::string_view name, source_location location);
+	template <typename UnitTest>
 	friend inline unit_test& make_unit_test(std::string test_suite_name, std::string_view name,
-											unit_test::func_type func, source_location location);
+											source_location location);
+	friend inline test_suite& make_test_suite(std::string_view name, source_location location);
 
 	std::string_view name() const { return name_; }
 
@@ -187,7 +259,7 @@ public:
 	{
 		std::vector<decltype(std::declval<unit_test>().arun())> promises;
 		for (auto& [name, test]: tests_)
-			promises.emplace_back(test.arun());
+			promises.emplace_back(test->arun());
 		bool success = true;
 		for (auto& promise: promises)
 			success &= promise.get();
@@ -199,14 +271,14 @@ public:
 	void display()
 	{
 		for (auto& [name, test]: tests_)
-			test.display();
+			test->display();
 		inf::cout << name_ << "{}: " << (has_failed() ? "failure" : "success") << std::endl;
 	}
 
 	bool has_failed() const
 	{
 		for (auto& [name, test]: tests_)
-			if (test.has_failed()) return true;
+			if (test->has_failed()) return true;
 		return false;
 	}
 
@@ -236,23 +308,23 @@ private:
 	static std::unordered_map<std::string, test_suite> test_suites_;
 
 	std::string name_;
-	std::unordered_map<std::string, unit_test> tests_;
+	std::unordered_map<std::string, std::unique_ptr<unit_test>> tests_;
 };
 
+#if defined(INF_HEADER_ONLY) || defined(INF_STATIC_TESTS)
 std::unordered_map<std::string, test_suite> test_suite::test_suites_{};
+#endif
 
-inline unit_test& make_unit_test(std::string test_suite_name, std::string_view name, unit_test::func_type func,
-								 source_location location = source_location::current())
+template <typename UnitTest>
+inline unit_test& make_unit_test(std::string test_suite_name, std::string_view name, source_location location)
 {
 	auto test_suite_it = test_suite::test_suites_.find(test_suite_name);
 	if (test_suite_it == test_suite::test_suites_.end()) throw exception("no inf::test_suite by that name", location);
 	auto& test_suite = test_suite_it->second;
-	auto [it, success] = test_suite.tests_.insert({
-		std::string{ name },
-		 unit_test{ test_suite.name(), name, func }
-	});
+	auto [it, success] =
+		test_suite.tests_.insert({ std::string{ name }, std::make_unique<UnitTest>(test_suite.name(), name) });
 	if (!success) throw exception("two inf::unit_test with the same name", location);
-	return it->second;
+	return *it->second;
 }
 
 inline test_suite& make_test_suite(std::string_view name, source_location location = source_location::current())

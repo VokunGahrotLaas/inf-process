@@ -51,15 +51,14 @@ public:
 		errno_guard errg{ "waitpid" };
 		pid_t res = ::waitpid(pid_, &status, 0);
 		if (res < 0) errg.throw_error(location);
-		return status;
+		return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 	}
 
 	void wait_exit(std::function<bool(int)> pred = inf::status_equals<0>,
 				   source_location location = source_location::current())
 	{
 		int status = wait();
-		if (!WIFEXITED(status)) throw status_exception(status, location);
-		status = WEXITSTATUS(status);
+		if ((status & 0xff) != status) throw status_exception(status, location);
 		if (!pred(status)) throw status_exception(status, location);
 	}
 
