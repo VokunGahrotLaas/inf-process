@@ -47,12 +47,38 @@ public:
 	~errno_exception() override = default;
 
 	std::string const& func() const noexcept { return func_; }
-
 	int errno_nb() const noexcept { return errno_nb_; }
 
 private:
 	std::string func_;
 	int errno_nb_;
+};
+
+class gai_exception : public exception
+{
+public:
+	using super_type = exception;
+
+	gai_exception(char const* node, char const* service, char const* err,
+				  source_location location = source_location::current()) noexcept
+		: super_type{ string_of_stream("inf::gai_exception: ", (node ? node : "0.0.0.0"), ':',
+									   (service ? service : "0"), " failed with error: ", (err ? err : "unknown")),
+					  location }
+		, node_{ node }
+		, service_{ service }
+		, err_{ err }
+	{}
+
+	~gai_exception() override = default;
+
+	char const* node() const noexcept { return node_; }
+	char const* service() const noexcept { return service_; }
+	char const* err() const noexcept { return err_; }
+
+private:
+	char const* node_;
+	char const* service_;
+	char const* err_;
 };
 
 class status_exception : public exception

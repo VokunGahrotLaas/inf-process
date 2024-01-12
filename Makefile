@@ -44,6 +44,9 @@ LIB_EXEC = ${dir}/libinf-process-static.a ${dir}/libinf-process.so ${dir}/libinf
 TEST_CXXFLAGS = ${CXXFLAGS}
 TEST_LDFLAGS = ${LDFLAGS}
 
+EXP_CXXFLAGS = ${CXXFLAGS}
+EXP_LDFLAGS = ${LDFLAGS}
+
 ifeq (${target},linux)
 TEST_EXT = .out
 else
@@ -54,6 +57,9 @@ TEST_SRC = ${wildcard tests/test-*.cpp}
 TEST_EXEC = ${addprefix ${dir}/,${TEST_SRC:.cpp=${TEST_EXT}}}
 TESTFAIL_SRC = ${wildcard tests/testfail-*.cpp}
 TESTFAIL_EXEC = ${addprefix ${dir}/,${TESTFAIL_SRC:.cpp=${TEST_EXT}}}
+
+EXP_SRC = ${wildcard examples/*.cpp}
+EXP_EXEC = ${addprefix ${dir}/,${EXP_SRC:.cpp=${TEST_EXT}}}
 
 SEP = -------------------------------
 TEST_FAILURE_FILE = ${dir}/.test-failure
@@ -161,6 +167,9 @@ ${dir}/src: | ${dir}
 ${dir}/tests: | ${dir}
 	${MKDIR} "${dir}/tests"
 
+${dir}/examples: | ${dir}
+	${MKDIR} "${dir}/examples"
+
 ${LIB_STATIC}: ${LIB_OBJ}
 	${AR} ${LIB_ARFLAGS} $@ $^
 
@@ -177,6 +186,9 @@ ${dir}/src/%.o: src/%.cpp | ${dir}/src
 
 ${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB} | ${dir}/tests
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
+
+${dir}/examples/%${TEST_EXT}: examples/%.cpp ${LIB} | ${dir}/examples
+	${CXX} ${EXP_CXXFLAGS} -o $@ $< ${EXP_LDFLAGS}
 
 lib: ${LIB}
 
@@ -217,14 +229,20 @@ check: pre_check ${TEST_EXEC} ${TESTFAIL_EXEC} .WAIT ${addprefix check_,${subst 
 		|| ${PRINTF_GREEN} "CHECK SUCCESS"
 	@! [ -f "${TEST_FAILURE_FILE}" ] || (${RM} "${TEST_FAILURE_FILE}"; exit 1)
 
+exp_%: ${dir}/examples/%${TEST_EXT} phony_explicit
+	${prefix} ./$< ${args}
+
 clean:
-	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC} ${TESTFAIL_EXEC}
+	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC} ${TESTFAIL_EXEC} ${EXP_EXEC} ${TEST_FAILURE_FILE}
 ifneq (${realpath ${dir}},${realpath .})
 ifneq (${wildcard ${dir}/src},)
 	${RMDIR} ${dir}/src
 endif
 ifneq (${wildcard ${dir}/tests},)
 	${RMDIR} ${dir}/tests
+endif
+ifneq (${wildcard ${dir}/examples},)
+	${RMDIR} ${dir}/examples
 endif
 ifneq (${wildcard ${dir}},)
 	${RMDIR} -p ${dir}
