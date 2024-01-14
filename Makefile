@@ -192,7 +192,7 @@ ${dir}/examples/%${TEST_EXT}: examples/%.cpp ${LIB} | ${dir}/examples
 
 lib: ${LIB}
 
-tests: ${TEST_EXEC}
+tests: ${TEST_EXEC} ${TESTFAIL_EXEC}
 
 checkfail_%: ${dir}/tests/testfail-%${TEST_EXT} phony_explicit
 	@echo ${prefix} ./$<; \

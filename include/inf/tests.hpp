@@ -120,6 +120,8 @@ public:
 	unit_test& operator=(unit_test const&) = delete;
 	unit_test& operator=(unit_test&&) = delete;
 
+	virtual ~unit_test() = default;
+
 	virtual void before() {}
 	virtual void main() {}
 	virtual void after() {}
