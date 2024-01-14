@@ -1,12 +1,14 @@
-// STL
-#include <array>
-#include <iostream>
-// inf
-#include <inf/network.hpp>
+#ifndef _WIN32
 
-#define MESSAGE                                                                                                        \
-	"GET /random_joke HTTP/1.1\nHost: official-joke-api.appspot.com\nAccept: "                                         \
-	"application/json;charset=UTF-8\nAccept-Encoding: identity\n\n"
+// STL
+#	include <array>
+#	include <iostream>
+// inf
+#	include <inf/network.hpp>
+
+#	define MESSAGE                                                                                                    \
+		"GET /random_joke HTTP/1.1\nHost: official-joke-api.appspot.com\nAccept: "                                     \
+		"application/json;charset=UTF-8\nAccept-Encoding: identity\n\n"
 
 int main()
 {
@@ -19,3 +21,15 @@ int main()
 	std::cout << "recieved:\n" << buffer.data() << std::endl;
 	return 0;
 }
+
+#else
+
+#	include <inf/stdio_stream.hpp>
+
+int main()
+{
+	inf::cout << "cannot use sockets yet so this test has no counterpart on windows" << std::endl;
+	return 0;
+}
+
+#endif
