@@ -6,6 +6,7 @@
 
 int main(int argc, char** argv)
 {
+	inf::init_socket();
 	if (argc != 2) return 1;
 	std::string_view const port = argv[1];
 	auto server = inf::TCPServerSocket::listen("0.0.0.0", port, 10);

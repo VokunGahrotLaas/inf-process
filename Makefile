@@ -159,11 +159,9 @@ ifeq (${socket},true)
 ifeq (${target},windows)
 	LIB_LDFLAGS += -lws2_32
 	TEST_LDFLAGS += -lws2_32
-	LIB_SRC += ${wildcard src/socket/*.cpp}
 else ifeq (${target},mingw)
 	LIB_LDFLAGS += -lws2_32
 	TEST_LDFLAGS += -lws2_32
-	LIB_SRC += ${wildcard src/socket/*.cpp}
 endif
 else ifneq (${socket},false)
 	$(error socket must be true or false)
@@ -185,9 +183,6 @@ ${dir}:
 ${dir}/src: | ${dir}
 	${MKDIR} "${dir}/src"
 
-${dir}/src/socket: | ${dir}/src
-	${MKDIR} "${dir}/src/socket"
-
 ${dir}/tests: | ${dir}
 	${MKDIR} "${dir}/tests"
 
@@ -206,9 +201,6 @@ ${LIB_SHARED}: ${LIB_OBJ}
 endif
 
 ${dir}/src/%.o: src/%.cpp | ${dir}/src
-	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
-
-${dir}/src/socket/%.o: src/socket/%.cpp | ${dir}/src/socket
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
 ${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB} | ${dir}/tests
@@ -272,9 +264,6 @@ clean_examples:
 
 clean: clean_tests clean_lib clean_examples
 ifneq (${realpath ${dir}},${realpath .})
-ifneq (${wildcard ${dir}/src/socket},)
-	${RMDIR} ${dir}/src/socket
-endif
 ifneq (${wildcard ${dir}/src},)
 	${RMDIR} ${dir}/src
 endif

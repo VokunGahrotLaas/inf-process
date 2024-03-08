@@ -14,6 +14,8 @@ int main(int argc, char** argv)
 {
 	using namespace std::string_literals;
 
+	inf::init_socket();
+
 	bool is_parent = argc == 1;
 	bool is_child = argc == 2;
 
@@ -44,7 +46,7 @@ int main_server(std::string_view port)
 	auto socket = inf::TCPServerSocket::listen("localhost", port, 1);
 	auto client = socket.accept();
 	socket.close();
-	std::array<char, 4'096 * 16> buffer = { 0 };
+	std::array<char, 4'096> buffer;
 	size_t nread = client.read({ buffer.data(), buffer.size() - 1 });
 	buffer[nread] = '\0';
 	inf::cout << "server recieved:\n" << buffer.data() << std::endl;
@@ -58,7 +60,7 @@ int main_client(std::string_view port)
 	auto socket = inf::TCPClientSocket::connect("localhost", port);
 	socket.write("Hello Server!");
 	inf::cout << "client sent" << std::endl;
-	std::array<char, 4'096 * 16> buffer = { 0 };
+	std::array<char, 4'096> buffer;
 	size_t nread = socket.read({ buffer.data(), buffer.size() - 1 });
 	buffer[nread] = '\0';
 	inf::cout << "client recieved:\n" << buffer.data() << std::endl;

@@ -5,6 +5,7 @@
 
 int main(int argc, char** argv)
 {
+	inf::init_socket();
 	if (argc != 3) return 1;
 	std::string_view const addr = argv[1];
 	std::string_view const port = argv[2];

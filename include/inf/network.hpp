@@ -24,13 +24,7 @@
 namespace inf
 {
 
-#ifdef _WIN32
-[[gnu::constructor]]
-void init_network();
-
-[[gnu::destructor]]
-void fini_network();
-#endif
+void init_socket();
 
 template <int Socktype>
 class Socket

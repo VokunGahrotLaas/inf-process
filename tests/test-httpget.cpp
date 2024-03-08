@@ -1,7 +1,7 @@
 // STL
 #include <array>
 #include <iostream>
-// inf
+// inf network
 #include <inf/network.hpp>
 
 #define MESSAGE                                                                                                        \
@@ -10,10 +10,11 @@
 
 int main()
 {
+	inf::init_socket();
 	auto socket = inf::TCPClientSocket::connect("official-joke-api.appspot.com", "80");
 	socket.write(MESSAGE);
 	std::cout << "sent" << std::endl;
-	std::array<char, 4'096 * 16> buffer = { 0 };
+	std::array<char, 4'096 * 16> buffer;
 	size_t nread = socket.read({ buffer.data(), buffer.size() - 1 });
 	buffer[nread] = '\0';
 	std::cout << "recieved:\n" << buffer.data() << std::endl;

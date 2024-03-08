@@ -1,20 +1,40 @@
 #ifdef _WIN32
-
 // STL
 #	include <iostream>
 // Windows
 #	include <windef.h>
+#endif
 // inf
-#	include <inf/network.hpp>
+#include <inf/network.hpp>
 
 namespace inf
 {
 
-int err = 0;
-
-[[gnu::constructor]]
-void init_network()
+namespace
 {
+
+#ifdef _WIN32
+static int err = 0;
+#endif
+
+void fini_socket()
+{
+#ifdef _WIN32
+	if (err != 0)
+	{
+		std::cerr << "Winsock 2.2 dll dtor err" << std::endl;
+		return;
+	}
+
+	WSACleanup();
+#endif
+}
+
+} // namespace
+
+void init_socket()
+{
+#ifdef _WIN32
 	WORD wVersionRequested = MAKEWORD(2, 2);
 	WSADATA wsaData;
 	err = WSAStartup(wVersionRequested, &wsaData);
@@ -30,20 +50,8 @@ void init_network()
 		std::cerr << "Could not find a usable version of Winsock.dll" << std::endl;
 		std::exit(1);
 	}
-}
-
-[[gnu::destructor]]
-void fini_network()
-{
-	if (err != 0)
-	{
-		std::cerr << "Winsock 2.2 dll dtor err" << std::endl;
-		return;
-	}
-
-	WSACleanup();
+#endif
+	std::atexit(fini_socket);
 }
 
 } // namespace inf
-
-#endif
