@@ -1,9 +1,13 @@
 ## custom
 
 compile_flags.txt
+compile_commands.json
 .gdb_history
 *.out
 .test-failure
+/build
+/*_build
+/.cache
 
 ## Windows: https://github.com/github/gitignore/blob/master/Global/Windows.gitignore
 

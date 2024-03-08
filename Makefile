@@ -19,6 +19,8 @@ arch =
 prefix =
 # build directory
 dir = build
+# socket lib ?
+socket = true
 
 SHELL = /bin/sh
 # path to .dll for wine
@@ -29,7 +31,8 @@ LD_LIBRARY_PATH ?=
 PATH ?=
 
 CXX ?= g++
-CXXFLAGS = -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O -I./include -D_GNU_SOURCE
+CPPFLAGS = -MMD -MP -D_GNU_SOURCE -Iinclude
+CXXFLAGS = ${CPPFLAGS} -std=${std} -Wall -Wextra -Wpedantic -Werror -O$O
 LDFLAGS =
 ARFLAGS = rcs
 
@@ -38,7 +41,8 @@ LIB_LDFLAGS = ${LDFLAGS}
 LIB_ARFLAGS = ${ARFLAGS}
 
 LIB_SRC = ${wildcard src/*.cpp}
-LIB_OBJ = ${addprefix ${dir}/,${LIB_SRC:.cpp=.o}}
+LIB_OBJ = ${LIB_SRC:%.cpp=${dir}/%.o}
+LIB_DEP = ${LIB_OBJ:%.o=%.d}
 LIB_EXEC = ${dir}/libinf-process-static.a ${dir}/libinf-process.so ${dir}/libinf-process.dll
 
 TEST_CXXFLAGS = ${CXXFLAGS}
@@ -54,12 +58,15 @@ TEST_EXT = .exe
 endif
 
 TEST_SRC = ${wildcard tests/test-*.cpp}
-TEST_EXEC = ${addprefix ${dir}/,${TEST_SRC:.cpp=${TEST_EXT}}}
+TEST_EXEC = ${TEST_SRC:%.cpp=${dir}/%${TEST_EXT}}
+TEST_DEP = ${TEST_EXEC:%${TEST_EXT}=%.d}
 TESTFAIL_SRC = ${wildcard tests/testfail-*.cpp}
-TESTFAIL_EXEC = ${addprefix ${dir}/,${TESTFAIL_SRC:.cpp=${TEST_EXT}}}
+TESTFAIL_EXEC = ${TESTFAIL_SRC:%.cpp=${dir}/%${TEST_EXT}}
+TESTFAIL_DEP = ${TESTFAIL_EXEC:%${TEST_EXT}=%.d}
 
 EXP_SRC = ${wildcard examples/*.cpp}
-EXP_EXEC = ${addprefix ${dir}/,${EXP_SRC:.cpp=${TEST_EXT}}}
+EXP_EXEC = ${EXP_SRC:%.cpp=${dir}/%${TEST_EXT}}
+EXP_DEP = ${EXP_EXEC:%${TEST_EXT}=%.d}
 
 SEP = -------------------------------
 TEST_FAILURE_FILE = ${dir}/.test-failure
@@ -148,12 +155,26 @@ else
 	$(error type must be static, shared, header_only or static_shared)
 endif
 
+ifeq (${socket},true)
+ifeq (${target},windows)
+	LIB_LDFLAGS += -lws2_32
+	TEST_LDFLAGS += -lws2_32
+	LIB_SRC += ${wildcard src/socket/*.cpp}
+else ifeq (${target},mingw)
+	LIB_LDFLAGS += -lws2_32
+	TEST_LDFLAGS += -lws2_32
+	LIB_SRC += ${wildcard src/socket/*.cpp}
+endif
+else ifneq (${socket},false)
+	$(error socket must be true or false)
+endif
+
 export WINEPATH LD_LIBRARY_PATH PATH
 
 all: lib
 
 # special targets
-.PHONY: all phony_explicit lib tests pre_check check clean
+.PHONY: all phony_explicit lib tests exps pre_check check clean_tests clean_lib clean_examples clean
 .WAIT:
 .SECONDARY:
 phony_explicit:
@@ -163,6 +184,9 @@ ${dir}:
 
 ${dir}/src: | ${dir}
 	${MKDIR} "${dir}/src"
+
+${dir}/src/socket: | ${dir}/src
+	${MKDIR} "${dir}/src/socket"
 
 ${dir}/tests: | ${dir}
 	${MKDIR} "${dir}/tests"
@@ -184,6 +208,9 @@ endif
 ${dir}/src/%.o: src/%.cpp | ${dir}/src
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
+${dir}/src/socket/%.o: src/socket/%.cpp | ${dir}/src/socket
+	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
+
 ${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB} | ${dir}/tests
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
 
@@ -193,6 +220,8 @@ ${dir}/examples/%${TEST_EXT}: examples/%.cpp ${LIB} | ${dir}/examples
 lib: ${LIB}
 
 tests: ${TEST_EXEC} ${TESTFAIL_EXEC}
+
+exps: ${EXP_EXEC}
 
 checkfail_%: ${dir}/tests/testfail-%${TEST_EXT} phony_explicit
 	@echo ${prefix} ./$<; \
@@ -232,9 +261,20 @@ check: pre_check ${TEST_EXEC} ${TESTFAIL_EXEC} .WAIT ${addprefix check_,${subst 
 exp_%: ${dir}/examples/%${TEST_EXT} phony_explicit
 	${prefix} ./$< ${args}
 
-clean:
-	${RM} ${LIB_OBJ} ${LIB_EXEC} ${TEST_EXEC} ${TESTFAIL_EXEC} ${EXP_EXEC} ${TEST_FAILURE_FILE}
+clean_tests:
+	${RM} ${TEST_EXEC} ${TESTFAIL_EXEC} ${TEST_DEP} ${TESTFAIL_DEP}
+
+clean_lib:
+	${RM} ${LIB_OBJ} ${LIB_EXEC} ${LIB_DEP}
+
+clean_examples:
+	${RM} ${EXP_EXEC} ${EXP_DEP}
+
+clean: clean_tests clean_lib clean_examples
 ifneq (${realpath ${dir}},${realpath .})
+ifneq (${wildcard ${dir}/src/socket},)
+	${RMDIR} ${dir}/src/socket
+endif
 ifneq (${wildcard ${dir}/src},)
 	${RMDIR} ${dir}/src
 endif
@@ -248,3 +288,5 @@ ifneq (${wildcard ${dir}},)
 	${RMDIR} -p ${dir}
 endif
 endif
+
+-include ${LIB_DEP} ${TEST_DEP} ${TESTFAIL_DEP} ${EXP_DEP}

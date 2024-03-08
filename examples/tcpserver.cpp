@@ -1,14 +1,14 @@
 // STL
 #include <array>
 #include <iostream>
-// inf
+// inf network
 #include <inf/network.hpp>
 
 int main(int argc, char** argv)
 {
 	if (argc != 2) return 1;
 	std::string_view const port = argv[1];
-	auto server = inf::TCPSocket::listen("0.0.0.0", port, 10);
+	auto server = inf::TCPServerSocket::listen("0.0.0.0", port, 10);
 	std::cout << "Running on port " << port << std::endl;
 	auto client = server.accept();
 	std::cout << "Accepted client" << std::endl;

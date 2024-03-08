@@ -4,20 +4,33 @@
 #include <cstring>
 #include <span>
 #include <string_view>
-// Unix
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include <utility>
+// Unix / Windows
+#ifndef _WIN32
+#	include <netdb.h>
+#	include <sys/socket.h>
+#	include <sys/types.h>
+#	include <netinet/in.h>
+#else
+#	include <winsock2.h>
+#	include <ws2tcpip.h>
+#endif
 // inf
+#include <inf/errno_guard.hpp>
 #include <inf/exceptions.hpp>
 #include <inf/ioutils.hpp>
 #include <inf/source_location.hpp>
-#include <utility>
-
-#include "inf/errno_guard.hpp"
 
 namespace inf
 {
+
+#ifdef _WIN32
+[[gnu::constructor]]
+void init_network();
+
+[[gnu::destructor]]
+void fini_network();
+#endif
 
 template <int Socktype>
 class Socket
@@ -39,7 +52,7 @@ public:
 		}
 		freeaddrinfo(result);
 		if (rp == nullptr)
-			throw gai_exception{ node.data(), service.data(), "could not bind to any address", location };
+			throw gai_exception{ node.data(), service.data(), "could not connect to any address", location };
 		return Socket{ fd };
 	}
 
@@ -58,7 +71,8 @@ public:
 			io::close(fd, location);
 		}
 		freeaddrinfo(result);
-		if (rp == nullptr) throw gai_exception{ nullptr, service.data(), "could not connect to any address", location };
+		if (rp == nullptr)
+			throw gai_exception{ node.data(), service.data(), "could not bind to any address", location };
 		return Socket{ fd };
 	}
 
@@ -94,7 +108,12 @@ public:
 
 	void close()
 	{
-		if (fd_ > 0) io::close(fd_);
+		if (fd_ > 0)
+#ifndef _WIN32
+			io::close(fd_);
+#else
+			::closesocket(fd_);
+#endif
 		fd_ = -1;
 	}
 
@@ -121,43 +140,69 @@ private:
 	int fd_;
 };
 
-class TCPSocket : public Socket<SOCK_STREAM>
+class TCPServerSocket;
+
+class TCPClientSocket : public Socket<SOCK_STREAM>
 {
 public:
 	using super_type = Socket<SOCK_STREAM>;
+	friend TCPServerSocket;
 
-	static TCPSocket connect(std::string_view node, std::string_view service,
-							 source_location location = source_location::current())
+	static TCPClientSocket connect(std::string_view node, std::string_view service,
+								   source_location location = source_location::current())
 	{
-		return TCPSocket{ super_type::connect(node, service, location) };
+		return TCPClientSocket{ super_type::connect(node, service, location) };
 	}
 
 	static Socket bind(std::string_view node, std::string_view service,
 					   source_location location = source_location::current()) = delete;
 
-	static TCPSocket listen(std::string_view node, std::string_view service, int n,
-							source_location location = source_location::current())
+private:
+	explicit TCPClientSocket(super_type&& super)
+		: super_type{ std::move(super) }
+	{}
+
+	explicit TCPClientSocket(int fd)
+		: super_type{ fd }
+	{}
+};
+
+class TCPServerSocket : public Socket<SOCK_STREAM>
+{
+public:
+	using super_type = Socket<SOCK_STREAM>;
+
+	static TCPClientSocket connect(std::string_view node, std::string_view service, source_location location) = delete;
+
+	static Socket bind(std::string_view node, std::string_view service, source_location location) = delete;
+
+	static TCPServerSocket listen(std::string_view node, std::string_view service, int n,
+								  source_location location = source_location::current())
 	{
-		TCPSocket socket{ super_type::bind(node, service, location) };
+		TCPServerSocket socket{ super_type::bind(node, service, location) };
 		errno_guard errg("listen");
 		if (::listen(socket.fd(), n) < 0) errg.throw_error(location);
 		return socket;
 	}
 
-	TCPSocket accept(source_location location = source_location::current())
+	void write(std::span<char const> data, source_location location) = delete;
+
+	size_t read(std::span<char> buffer, source_location location) = delete;
+
+	TCPClientSocket accept(source_location location = source_location::current())
 	{
 		errno_guard errg{ "accept" };
 		int cfd = ::accept(fd(), nullptr, nullptr);
 		if (cfd < 0) errg.throw_error(location);
-		return TCPSocket{ cfd };
+		return TCPClientSocket{ cfd };
 	}
 
 private:
-	explicit TCPSocket(super_type&& super)
+	explicit TCPServerSocket(super_type&& super)
 		: super_type{ std::move(super) }
 	{}
 
-	explicit TCPSocket(int fd)
+	explicit TCPServerSocket(int fd)
 		: super_type{ fd }
 	{}
 };
