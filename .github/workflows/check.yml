@@ -7,32 +7,62 @@ on:
     branches: [ "master" ]
 
 jobs:
-  check-ubuntu:
+  check-ubuntu-shared:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
-    - name: make tests debug
-      run: make dir=build-debug mode=debug asan=true tests -j
-    - name: make check debug
-      run: make dir=build-debug mode=debug asan=true check -j -O
+    - name: make tests
+      run: make type=shared mode=debug asan=true tests -j
+    - name: make check
+      run: make type=shared mode=debug asan=true check -j -O
 
-    - name: make tests release
-      run: make dir=build-release mode=release asan=true tests -j
-    - name: make check release
-      run: make dir=build-release mode=release asan=true check -j -O
+  check-ubuntu-static:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
 
-  check-windows:
+    - name: make tests
+      run: make type=static mode=debug asan=true tests -j
+    - name: make check
+      run: make type=static mode=debug asan=true check -j -O
+
+  check-ubuntu-header_only:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: make tests
+      run: make type=header_only mode=debug asan=true tests -j
+    - name: make check
+      run: make type=header_only mode=debug asan=true check -j -O
+
+  check-windows-shared:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
 
-    - name: make tests debug
-      run: make dir=build-debug mode=debug target=windows tests -j
-    - name: make check debug
-      run: make dir=build-debug mode=debug target=windows check -j -O
+    - name: make tests
+      run: make type=shared mode=debug target=windows tests -j
+    - name: make check
+      run: make type=shared mode=debug target=windows check -j -O
 
-    - name: make tests release
-      run: make dir=build-release mode=release target=windows tests -j
-    - name: make check release
-      run: make dir=build-release mode=release target=windows check -j -O
+  check-windows-static:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: make tests
+      run: make type=static mode=debug target=windows tests -j
+    - name: make check
+      run: make type=static mode=debug target=windows check -j -O
+
+  check-windows-header_only:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: make tests
+      run: make type=header_only mode=debug target=windows tests -j
+    - name: make check
+      run: make type=header_only mode=debug target=windows check -j -O

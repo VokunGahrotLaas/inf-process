@@ -2,6 +2,7 @@
 
 // STL
 #include <cstring>
+#include <iostream>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -12,6 +13,7 @@
 #	include <sys/types.h>
 #	include <netinet/in.h>
 #else
+#	include <windef.h>
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
 #endif
@@ -80,6 +82,7 @@ public:
 	{
 		close();
 		fd_ = std::exchange(other.fd_, -1);
+		return *this;
 	}
 
 	~Socket() { close(); }
@@ -134,6 +137,9 @@ private:
 	int fd_;
 };
 
+extern template class Socket<SOCK_STREAM>;
+extern template class Socket<SOCK_DGRAM>;
+
 class TCPServerSocket;
 
 class TCPClientSocket : public Socket<SOCK_STREAM>
@@ -171,25 +177,13 @@ public:
 	static Socket bind(std::string_view node, std::string_view service, source_location location) = delete;
 
 	static TCPServerSocket listen(std::string_view node, std::string_view service, int n,
-								  source_location location = source_location::current())
-	{
-		TCPServerSocket socket{ super_type::bind(node, service, location) };
-		errno_guard errg("listen");
-		if (::listen(socket.fd(), n) < 0) errg.throw_error(location);
-		return socket;
-	}
+								  source_location location = source_location::current());
 
 	void write(std::span<char const> data, source_location location) = delete;
 
 	size_t read(std::span<char> buffer, source_location location) = delete;
 
-	TCPClientSocket accept(source_location location = source_location::current())
-	{
-		errno_guard errg{ "accept" };
-		int cfd = ::accept(fd(), nullptr, nullptr);
-		if (cfd < 0) errg.throw_error(location);
-		return TCPClientSocket{ cfd };
-	}
+	TCPClientSocket accept(source_location location = source_location::current());
 
 private:
 	explicit TCPServerSocket(super_type&& super)
@@ -202,5 +196,73 @@ private:
 };
 
 using UDPSocket = Socket<SOCK_DGRAM>;
+
+#if defined(INF_HEADER_ONLY) || defined(INF_STATIC_NETWORK)
+
+namespace
+{
+
+#	ifdef _WIN32
+static int err = 0;
+#	endif
+
+void fini_socket()
+{
+#	ifdef _WIN32
+	if (err != 0)
+	{
+		std::cerr << "Winsock 2.2 dll dtor err" << std::endl;
+		return;
+	}
+
+	WSACleanup();
+#	endif
+}
+
+} // namespace
+
+void init_socket()
+{
+#	ifdef _WIN32
+	WORD wVersionRequested = MAKEWORD(2, 2);
+	WSADATA wsaData;
+	err = WSAStartup(wVersionRequested, &wsaData);
+
+	if (err != 0)
+	{
+		std::cerr << "WSAStartup failed with error: " << err << std::endl;
+		std::exit(1);
+	}
+
+	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
+	{
+		std::cerr << "Could not find a usable version of Winsock.dll" << std::endl;
+		std::exit(1);
+	}
+#	endif
+	std::atexit(fini_socket);
+}
+
+template class Socket<SOCK_STREAM>;
+template class Socket<SOCK_DGRAM>;
+
+TCPServerSocket TCPServerSocket::listen(std::string_view node, std::string_view service, int n,
+										source_location location)
+{
+	TCPServerSocket socket{ super_type::bind(node, service, location) };
+	errno_guard errg("listen");
+	if (::listen(socket.fd(), n) < 0) errg.throw_error(location);
+	return socket;
+}
+
+TCPClientSocket TCPServerSocket::accept(source_location location)
+{
+	errno_guard errg{ "accept" };
+	int cfd = ::accept(fd(), nullptr, nullptr);
+	if (cfd < 0) errg.throw_error(location);
+	return TCPClientSocket{ cfd };
+}
+
+#endif
 
 } // namespace inf

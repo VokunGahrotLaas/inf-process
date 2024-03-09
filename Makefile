@@ -158,10 +158,14 @@ endif
 ifeq (${socket},true)
 ifeq (${target},windows)
 	LIB_LDFLAGS += -lws2_32
+ifeq (${type},header_only)
 	TEST_LDFLAGS += -lws2_32
+endif
 else ifeq (${target},mingw)
 	LIB_LDFLAGS += -lws2_32
+ifeq (${type},header_only)
 	TEST_LDFLAGS += -lws2_32
+endif
 endif
 else ifneq (${socket},false)
 	$(error socket must be true or false)
