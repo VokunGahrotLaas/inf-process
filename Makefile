@@ -19,8 +19,6 @@ arch =
 prefix =
 # build directory
 dir = build
-# socket lib ?
-socket = true
 
 SHELL = /bin/sh
 # path to .dll for wine
@@ -111,12 +109,15 @@ endif
 ifeq (${target},windows)
 	LIB_STATIC = ${dir}/libinf-process-static.a
 	LIB_SHARED = ${dir}/libinf-process.dll
+	WINDOWS = true
 else ifeq (${target},mingw)
 	LIB_STATIC = ${dir}/libinf-process-static.a
 	LIB_SHARED = ${dir}/libinf-process.dll
+	WINDOWS = true
 else ifeq (${target},linux)
 	LIB_STATIC = ${dir}/libinf-process-static.a
 	LIB_SHARED = ${dir}/libinf-process.so
+	WINDOWS = false
 else
 	$(error target must be mingw or linux)
 endif
@@ -124,23 +125,35 @@ endif
 ifeq (${type},static)
 	TEST_LDFLAGS += -L${dir} -linf-process-static
 	LIB = ${LIB_STATIC}
+	LIB_STATIC_PART = ${LIB_STATIC}
+	LIB_SHARED_PART =
+	ifeq (${WINDOWS},true)
+		TEST_LDFLAGS += -lws2_32
+	endif
 else ifeq (${type},shared)
 	LIB_CXXFLAGS += -fPIC
 	LIB_LDFLAGS += -shared
 	TEST_LDFLAGS += -L${dir} -linf-process
 	LIB = ${LIB_SHARED}
+	LIB_STATIC_PART =
+	LIB_SHARED_PART = ${LIB_SHARED}
 	ifeq (${target},windows)
 		PATH := ${PATH}\;${dir}
 	else ifeq (${target},mingw)
 		WINEPATH := ${WINEPATH}\;${dir}
 	else ifeq (${target},linux)
 		LD_LIBRARY_PATH := ${LD_LIBRARY_PATH}:${dir}
+	endif
+	ifeq (${WINDOWS},true)
+		LIB_LDFLAGS += -lws2_32
 	endif
 else ifeq (${type},static_shared)
 	LIB_CXXFLAGS += -fPIC
 	LIB_LDFLAGS += -shared
 	TEST_LDFLAGS += -L${dir} -linf-process
 	LIB = ${LIB_SHARED} ${LIB_STATIC}
+	LIB_STATIC_PART =
+	LIB_SHARED_PART = ${LIB_SHARED}
 	ifeq (${target},windows)
 		PATH := ${PATH}\;${dir}
 	else ifeq (${target},mingw)
@@ -148,27 +161,19 @@ else ifeq (${type},static_shared)
 	else ifeq (${target},linux)
 		LD_LIBRARY_PATH := ${LD_LIBRARY_PATH}:${dir}
 	endif
+	ifeq (${WINDOWS},true)
+		LIB_LDFLAGS += -lws2_32
+	endif
 else ifeq (${type},header_only)
 	TEST_CXXFLAGS += -DINF_HEADER_ONLY
 	LIB =
+	LIB_STATIC_PART =
+	LIB_SHARED_PART =
+	ifeq (${WINDOWS},true)
+		TEST_LDFLAGS += -lws2_32
+	endif
 else
 	$(error type must be static, shared, header_only or static_shared)
-endif
-
-ifeq (${socket},true)
-ifeq (${target},windows)
-	LIB_LDFLAGS += -lws2_32
-ifeq (${type},header_only)
-	TEST_LDFLAGS += -lws2_32
-endif
-else ifeq (${target},mingw)
-	LIB_LDFLAGS += -lws2_32
-ifeq (${type},header_only)
-	TEST_LDFLAGS += -lws2_32
-endif
-endif
-else ifneq (${socket},false)
-	$(error socket must be true or false)
 endif
 
 export WINEPATH LD_LIBRARY_PATH PATH
@@ -207,10 +212,10 @@ endif
 ${dir}/src/%.o: src/%.cpp | ${dir}/src
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB} | ${dir}/tests
+${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB_STATIC_PART} | ${LIB_SHARED_PART} ${dir}/tests
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
 
-${dir}/examples/%${TEST_EXT}: examples/%.cpp ${LIB} | ${dir}/examples
+${dir}/examples/%${TEST_EXT}: examples/%.cpp ${LIB_STATIC_PART} | ${LIB_SHARED_PART} ${dir}/examples
 	${CXX} ${EXP_CXXFLAGS} -o $@ $< ${EXP_LDFLAGS}
 
 lib: ${LIB}
