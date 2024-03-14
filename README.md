@@ -14,6 +14,8 @@ C++ wrapper for C io / POSIX / Windows functions.
 
 * Wrapping a pipe() in a inf::pipe.
 
+* Wrapping socket APIs with `<inf/network.hpp>`
+
 * Wrapping posix_spawn/waitpid/waitid on Unix \
     & _spawnvpe/_cwait on Windows with inf::spawn.
 

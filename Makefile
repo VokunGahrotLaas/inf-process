@@ -124,16 +124,19 @@ endif
 
 ifeq (${type},static)
 	TEST_LDFLAGS += -L${dir} -linf-process-static
+	EXP_LDFLAGS += -L${dir} -linf-process-static
 	LIB = ${LIB_STATIC}
 	LIB_STATIC_PART = ${LIB_STATIC}
 	LIB_SHARED_PART =
 	ifeq (${WINDOWS},true)
 		TEST_LDFLAGS += -lws2_32
+		EXP_LDFLAGS += -lws2_32
 	endif
 else ifeq (${type},shared)
 	LIB_CXXFLAGS += -fPIC
 	LIB_LDFLAGS += -shared
 	TEST_LDFLAGS += -L${dir} -linf-process
+	EXP_LDFLAGS += -L${dir} -linf-process
 	LIB = ${LIB_SHARED}
 	LIB_STATIC_PART =
 	LIB_SHARED_PART = ${LIB_SHARED}
@@ -151,6 +154,7 @@ else ifeq (${type},static_shared)
 	LIB_CXXFLAGS += -fPIC
 	LIB_LDFLAGS += -shared
 	TEST_LDFLAGS += -L${dir} -linf-process
+	EXP_LDFLAGS += -L${dir} -linf-process
 	LIB = ${LIB_SHARED} ${LIB_STATIC}
 	LIB_STATIC_PART =
 	LIB_SHARED_PART = ${LIB_SHARED}
@@ -166,11 +170,13 @@ else ifeq (${type},static_shared)
 	endif
 else ifeq (${type},header_only)
 	TEST_CXXFLAGS += -DINF_HEADER_ONLY
+	EXP_CXXFLAGS += -DINF_HEADER_ONLY
 	LIB =
 	LIB_STATIC_PART =
 	LIB_SHARED_PART =
 	ifeq (${WINDOWS},true)
 		TEST_LDFLAGS += -lws2_32
+		EXP_LDFLAGS += -lws2_32
 	endif
 else
 	$(error type must be static, shared, header_only or static_shared)
