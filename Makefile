@@ -62,7 +62,7 @@ TESTFAIL_SRC = ${wildcard tests/testfail-*.cpp}
 TESTFAIL_EXEC = ${TESTFAIL_SRC:%.cpp=${dir}/%${TEST_EXT}}
 TESTFAIL_DEP = ${TESTFAIL_EXEC:%${TEST_EXT}=%.d}
 
-EXP_SRC = ${wildcard examples/*.cpp}
+EXP_SRC = ${wildcard examples/*.cpp examples/*/*.cpp}
 EXP_EXEC = ${EXP_SRC:%.cpp=${dir}/%${TEST_EXT}}
 EXP_DEP = ${EXP_EXEC:%${TEST_EXT}=%.d}
 
@@ -192,37 +192,33 @@ all: lib
 .SECONDARY:
 phony_explicit:
 
-${dir}:
-	${MKDIR} "${dir}"
-
-${dir}/src: | ${dir}
-	${MKDIR} "${dir}/src"
-
-${dir}/tests: | ${dir}
-	${MKDIR} "${dir}/tests"
-
-${dir}/examples: | ${dir}
-	${MKDIR} "${dir}/examples"
-
 ${LIB_STATIC}: ${LIB_OBJ}
+	@mkdir -p ${dir $@}
 	${AR} ${LIB_ARFLAGS} $@ $^
 
 ifeq (${type},static_shared)
 ${LIB_SHARED}: ${LIB_STATIC}
+	@mkdir -p ${dir $@}
 	${CXX} -o $@ -Wl,--whole-archive $< -Wl,--no-whole-archive ${LIB_LDFLAGS}
 else
 ${LIB_SHARED}: ${LIB_OBJ}
+	@mkdir -p ${dir $@}
 	${CXX} -o $@ $^ ${LIB_LDFLAGS}
 endif
 
-${dir}/src/%.o: src/%.cpp | ${dir}/src
+${dir}/src/%.o: src/%.cpp
+	@mkdir -p ${dir $@}
 	${CXX} ${LIB_CXXFLAGS} -o $@ -c $<
 
-${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB_STATIC_PART} | ${LIB_SHARED_PART} ${dir}/tests
+${dir}/tests/test%${TEST_EXT}: tests/test%.cpp ${LIB_STATIC_PART} | ${LIB_SHARED_PART}
+	@mkdir -p ${dir $@}
 	${CXX} ${TEST_CXXFLAGS} -o $@ $< ${TEST_LDFLAGS}
 
-${dir}/examples/%${TEST_EXT}: examples/%.cpp ${LIB_STATIC_PART} | ${LIB_SHARED_PART} ${dir}/examples
+${dir}/examples/%${TEST_EXT}: examples/%.cpp ${LIB_STATIC_PART} | ${LIB_SHARED_PART}
+	@mkdir -p ${dir $@}
 	${CXX} ${EXP_CXXFLAGS} -o $@ $< ${EXP_LDFLAGS}
+
+${dir}/examples/rootme/tcp52022${TEST_EXT}: EXP_LDFLAGS += -lz
 
 lib: ${LIB}
 
@@ -268,6 +264,9 @@ check: pre_check ${TEST_EXEC} ${TESTFAIL_EXEC} .WAIT ${addprefix check_,${subst 
 exp_%: ${dir}/examples/%${TEST_EXT} phony_explicit
 	${prefix} ./$< ${args}
 
+rootme_%: ${dir}/examples/rootme/%${TEST_EXT} phony_explicit
+	${prefix} ./$< ${args}
+
 clean_tests:
 	${RM} ${TEST_EXEC} ${TESTFAIL_EXEC} ${TEST_DEP} ${TESTFAIL_DEP}
 
@@ -279,18 +278,7 @@ clean_examples:
 
 clean: clean_tests clean_lib clean_examples
 ifneq (${realpath ${dir}},${realpath .})
-ifneq (${wildcard ${dir}/src},)
-	${RMDIR} ${dir}/src
-endif
-ifneq (${wildcard ${dir}/tests},)
-	${RMDIR} ${dir}/tests
-endif
-ifneq (${wildcard ${dir}/examples},)
-	${RMDIR} ${dir}/examples
-endif
-ifneq (${wildcard ${dir}},)
-	${RMDIR} -p ${dir}
-endif
+	rm -rf ${dir}
 endif
 
 -include ${LIB_DEP} ${TEST_DEP} ${TESTFAIL_DEP} ${EXP_DEP}

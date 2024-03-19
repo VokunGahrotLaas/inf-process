@@ -8,6 +8,7 @@ compile_commands.json
 /build
 /*_build
 /.cache
+/examples/rootme
 
 ## Windows: https://github.com/github/gitignore/blob/master/Global/Windows.gitignore
 
